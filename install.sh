@@ -66,7 +66,7 @@ Terminal=false
 Type=Application
 Icon=${APP_NAME}
 Categories=Graphics;Viewer;GTK;
-MimeType=image/jpeg;image/png;image/gif;image/webp;
+MimeType=image/jpeg;image/png;image/gif;image/webp;image/svg+xml;
 StartupNotify=true
 StartupWMClass=com.example.vView
 EOF

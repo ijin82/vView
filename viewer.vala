@@ -10,6 +10,7 @@ public class ViewerController : GLib.Object {
     public Gdk.Pixbuf? current_pixbuf = null;
     public bool is_modified = false;
     private uint cursor_timeout_id = 0;
+    public PropertiesView? properties_view { get; set; default = null; }
 
     public ViewerController (Adw.ApplicationWindow win, ImageCanvas canvas, EditorManager editor, Gtk.Button save_button, Gtk.ToggleButton edit_toggle_button) {
         Object (
@@ -45,6 +46,9 @@ public class ViewerController : GLib.Object {
             current_pixbuf = canvas.base_pixbuf;
             canvas.queue_draw ();
             mark_modified ();
+            if (properties_view != null && image_files.length > 0) {
+                properties_view.update_metadata (image_files[current_index], current_pixbuf);
+            }
         }
     }
 
@@ -91,12 +95,13 @@ public class ViewerController : GLib.Object {
         }
 
         var filter_all = new Gtk.FileFilter ();
-        filter_all.name = "All Supported Images (*.jpg, *.png, *.webp, *.gif)";
+        filter_all.name = "All Supported Images (*.jpg, *.png, *.webp, *.gif, *.svg)";
         filter_all.add_pattern ("*.jpg");
         filter_all.add_pattern ("*.jpeg");
         filter_all.add_pattern ("*.png");
         filter_all.add_pattern ("*.webp");
         filter_all.add_pattern ("*.gif");
+        filter_all.add_pattern ("*.svg");
 
         var filters = new GLib.ListStore (typeof (Gtk.FileFilter));
         filters.append (filter_all);
@@ -122,26 +127,35 @@ public class ViewerController : GLib.Object {
         if (canvas == null || canvas.base_pixbuf == null) return;
         var save_pb = canvas.get_composed_pixbuf ();
         if (save_pb == null) return;
+        string actual_path = dest_path;
         var lower = dest_path.down ();
 
         try {
             if (lower.has_suffix (".jpg") || lower.has_suffix (".jpeg")) {
-                save_pb.save (dest_path, "jpeg", "quality", "95", null);
+                save_pb.save (actual_path, "jpeg", "quality", "95", null);
             } else if (lower.has_suffix (".webp")) {
-                save_pb.save (dest_path, "webp", "quality", "95", null);
+                save_pb.save (actual_path, "webp", "quality", "95", null);
             } else if (lower.has_suffix (".png")) {
-                save_pb.save (dest_path, "png", null);
+                save_pb.save (actual_path, "png", null);
             } else if (lower.has_suffix (".gif")) {
-                save_pb.save (dest_path, "gif", null);
+                save_pb.save (actual_path, "gif", null);
+            } else if (lower.has_suffix (".svg")) {
+                actual_path = dest_path.substring (0, dest_path.length - 4) + ".png";
+                save_pb.save (actual_path, "png", null);
             } else {
-                save_pb.save (dest_path + ".jpg", "jpeg", "quality", "95", null);
+                actual_path = dest_path + ".jpg";
+                save_pb.save (actual_path, "jpeg", "quality", "95", null);
             }
 
             is_modified = false;
             save_button.visible = false;
-            win.title = "vView - %s".printf (dest_path);
+            win.title = "vView - %s".printf (actual_path);
+
+            if (properties_view != null) {
+                properties_view.update_metadata (actual_path, save_pb);
+            }
         } catch (Error e) {
-            warning ("Error saving image '%s': %s", dest_path, e.message);
+            warning ("Error saving image '%s': %s", actual_path, e.message);
         }
     }
 
@@ -211,7 +225,7 @@ public class ViewerController : GLib.Object {
                 var lower = name.down ();
                 if (lower.has_suffix (".jpg") || lower.has_suffix (".jpeg") ||
                     lower.has_suffix (".png") || lower.has_suffix (".gif")  ||
-                    lower.has_suffix (".webp")) {
+                    lower.has_suffix (".webp") || lower.has_suffix (".svg")) {
                     list.prepend (Path.build_filename (dir_path, name));
                 }
             }
@@ -276,6 +290,10 @@ public class ViewerController : GLib.Object {
         }
 
         win.title = "vView - %s".printf (path);
+
+        if (properties_view != null) {
+            properties_view.update_metadata (path, current_pixbuf);
+        }
     }
 
     public void show_shortcuts_dialog () {
@@ -292,6 +310,7 @@ public class ViewerController : GLib.Object {
         add_shortcut_row (group, "Previous Image", "← / Scroll Up");
         add_shortcut_row (group, "Zoom In / Out", "Ctrl + Wheel / Ctrl + [+/-]");
         add_shortcut_row (group, "Zoom 100% / Fit", "Ctrl + 0");
+        add_shortcut_row (group, "Image Properties", "Alt + Enter / Ctrl + I");
         add_shortcut_row (group, "Rotate Clockwise", "R");
         add_shortcut_row (group, "Rotate Counter-Clockwise", "L");
         add_shortcut_row (group, "Toggle Editing Toolbar", "E");

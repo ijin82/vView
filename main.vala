@@ -10,6 +10,9 @@ public class VViewApp : Adw.Application {
     private Gtk.ToggleButton edit_toggle_button;
     private Gtk.Button save_button;
     private Gtk.Button zoom_label_btn;
+    private PropertiesView properties_view;
+    private Gtk.Revealer prop_revealer;
+    private Gtk.ToggleButton properties_button;
 
     private string? target_path = null;
     private bool is_loading_settings = true;
@@ -146,10 +149,34 @@ public class VViewApp : Adw.Application {
         header.pack_end (fs_button);
 
         // Info / Shortcuts button
-        var info_button = new Gtk.Button.from_icon_name ("dialog-information-symbolic");
+        var info_button = new Gtk.Button.from_icon_name ("help-browser-symbolic");
         info_button.tooltip_text = "Keyboard Shortcuts & Info (F1)";
         info_button.clicked.connect (viewer.show_shortcuts_dialog);
         header.pack_end (info_button);
+
+        // Properties View & Revealer
+        properties_view = new PropertiesView ();
+        viewer.properties_view = properties_view;
+
+        prop_revealer = new Gtk.Revealer ();
+        prop_revealer.transition_type = Gtk.RevealerTransitionType.SLIDE_LEFT;
+        prop_revealer.set_child (properties_view);
+        prop_revealer.reveal_child = false;
+        prop_revealer.hexpand = false;
+        prop_revealer.vexpand = true;
+
+        properties_button = new Gtk.ToggleButton ();
+        properties_button.icon_name = "info-outline-symbolic";
+        properties_button.tooltip_text = "Image Properties (Alt+Enter / Ctrl+I)";
+        properties_button.toggled.connect (() => {
+            prop_revealer.reveal_child = properties_button.active;
+        });
+
+        properties_view.close_requested.connect (() => {
+            properties_button.active = false;
+        });
+
+        header.pack_end (properties_button);
 
         // Rotate clockwise button
         var rotate_cw_button = new Gtk.Button.from_icon_name ("object-rotate-right-symbolic");
@@ -177,20 +204,30 @@ public class VViewApp : Adw.Application {
             header.visible = !win.fullscreened;
             if (win.fullscreened) {
                 edit_revealer.reveal_child = false;
+                prop_revealer.reveal_child = false;
                 viewer.reset_cursor_inactivity_timer ();
             } else {
                 if (edit_toggle_button.active) {
                     edit_revealer.reveal_child = true;
+                }
+                if (properties_button.active) {
+                    prop_revealer.reveal_child = true;
                 }
                 viewer.show_cursor ();
                 viewer.cancel_cursor_timer ();
             }
         });
 
+        var main_hbox = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 0);
+        main_hbox.hexpand = true;
+        main_hbox.vexpand = true;
+        main_hbox.append (canvas);
+        main_hbox.append (prop_revealer);
+
         var toolbar_view = new Adw.ToolbarView ();
         toolbar_view.add_top_bar (header);
         toolbar_view.add_top_bar (edit_revealer);
-        toolbar_view.set_content (canvas);
+        toolbar_view.set_content (main_hbox);
         win.set_content (toolbar_view);
 
         // Track mouse motion for cursor visibility, inactivity timer, and zoom focus
@@ -371,10 +408,23 @@ public class VViewApp : Adw.Application {
                 return true;
             }
 
+            // Toggle Image Properties on Alt+Enter / Alt+Return or Ctrl+I
+            if (((state & Gdk.ModifierType.ALT_MASK) != 0 &&
+                 (keyval == Gdk.Key.Return || keyval == Gdk.Key.KP_Enter)) ||
+                ((state & Gdk.ModifierType.CONTROL_MASK) != 0 &&
+                 (latin_lower == Gdk.Key.i || key_lower == Gdk.Key.Cyrillic_sha))) {
+                properties_button.active = !properties_button.active;
+                return true;
+            }
+
             switch (keyval) {
                 case Gdk.Key.Escape:
                     if (win.fullscreened) {
                         win.unfullscreen ();
+                        return true;
+                    }
+                    if (properties_button.active) {
+                        properties_button.active = false;
                         return true;
                     }
                     if (edit_toggle_button.active) {

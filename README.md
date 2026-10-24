@@ -4,11 +4,42 @@
 
 # vView (Vala View)
 
-**vView** is a lightweight, blazing-fast, and minimalist image viewer for Linux, built with **Vala**, **GTK4**, and **Libadwaita**.
+**vView** is a lightweight, blazing-fast, and minimalist image viewer and quick annotation editor for Linux, built with **Vala**, **GTK4**, and **Libadwaita**.
 
 It seamlessly integrates with GNOME desktop environments following the GNOME Human Interface Guidelines (HIG), while functioning smoothly across all other desktop environments (KDE Plasma, XFCE, etc.).
 
 The compiled binary is only **~45 KB**, and compile times are under **1 second**.
+
+---
+
+## Supported Image Formats
+
+vView supports all standard modern image and vector formats out of the box:
+
+| Format | Extensions | Features & Capabilities |
+| :--- | :--- | :--- |
+| **JPEG** | `.jpg`, `.jpeg` | High-quality 95% save, EXIF metadata extraction & camera info |
+| **PNG** | `.png` | Lossless raster graphics with transparency support |
+| **WebP** | `.webp` | Modern web format with high compression and transparency |
+| **GIF** | `.gif` | Static and animated graphic format support |
+| **SVG** | `.svg` | Crisp vector graphics rendering via `librsvg`; annotated edits export directly to PNG |
+
+---
+
+## Quick Notes & Annotation Editor
+
+vView includes a built-in lightweight annotation toolbar designed for taking quick notes, marking up screenshots, pointing out interface bugs, and masking confidential data before sharing images.
+
+Press **`E`** (or click the edit button in the header bar) to reveal the toolbar:
+
+* ✏️ **Straight Lines & Scalable Arrows:** Direct attention to specific UI elements or details with clean, anti-aliased directional arrows and lines.
+* 🔲 **Shapes (Rectangle & Circle):** Highlight or frame regions of interest with adjustable stroke thickness.
+* 💬 **Quick Text Notes & Badges:** Click anywhere on the image to type notes and labels. Features background badges for readability against any background and full system font selection (`FontChooserDialog`).
+* ⬛ **Redaction & Privacy Masking (Mosaic Pixelation):** Drag a box over sensitive information (passwords, email addresses, personal data) to apply smooth mosaic pixelation.
+* 🖐️ **Select & Move:** Reposition any annotation item after drawing it.
+* 🎨 **Color & Stroke Customization:** Choose any stroke or text color with the color picker, and adjust line width from 1 px to 50 px with real-time preview.
+* ↩️ **Full Undo & Redo History:** Safely revert or re-apply any editing action using `Ctrl + Z` and `Ctrl + Y` (or `Ctrl + Shift + Z`).
+* 💾 **Lossless In-Memory Workflow:** Edits are kept in memory until you choose to **Save** (`Ctrl + S`) or **Save As…** (`Ctrl + Shift + S`).
 
 ---
 
@@ -22,20 +53,15 @@ The compiled binary is only **~45 KB**, and compile times are under **1 second**
 * 📁 **Smart Directory Navigation:**
   * Opens the requested image and gathers all supported images in the same directory.
   * Infinite looping (navigating past the last image loops back to the first).
-  * Supported formats: **JPEG** (`.jpg`, `.jpeg`), **PNG** (`.png`), **GIF** (`.gif`), **WebP** (`.webp`).
+  * Fast navigation via arrow keys, Space, Page Up/Down, or mouse scroll wheel.
 * 🔄 **In-Memory Rotation & Flexible Saving:**
   * Rotate images clockwise (`R`) or counter-clockwise (`L`) in-memory without altering the original file immediately.
   * A prominent **Save** button appears in the header bar as soon as changes are made.
   * Choice between **Overwrite** (save directly into the current file) and **Save As…** (choose directory and filename via native `Gtk.FileDialog`).
   * Preserves original file format and high visual fidelity (JPEG/WebP quality 95, lossless PNG/GIF).
-* ✏️ **Annotation & Editing Toolbar:**
-  * Toggle the editing toolbar underneath the header bar (`E` or edit button).
-  * **Draw Arrow:** Highlight details with crisp, scalable arrows.
-  * **Draw Rectangle & Circle:** Frame areas of interest.
-  * **Redact Zone (Mosaic Pixelation):** Select any rectangular region to pixelate sensitive text or personal info.
-  * **Insert Text:** Click anywhere on the image to place custom text labels using any installed system font.
-  * **Color & Stroke Pickers:** Choose any stroke color and customize line width (1 to 50 px).
-  * **Full Undo / Redo:** Step back and forth through edits (`Ctrl + Z` / `Ctrl + Y`).
+* ℹ️ **Image Properties & Metadata Panel (`Alt + Enter` / `Ctrl + I`):**
+  * Displays native resolution, megapixels, file size, MIME type, dates, and camera EXIF information.
+  * Quick-action buttons to open containing folder in file manager or copy path to clipboard.
 * 🖱️ **Mouse Scroll Navigation:** Instantly switch to the next/previous image by scrolling the mouse wheel.
 * ⌨️ **Ergonomic Shortcuts & Wide Info Dialog:** Intuitive keyboard navigation and a wide, readable shortcuts overlay (`F1` or `[i]`).
 * 🏷️ **Clear Window Title:** Displays the full path of the current image: `vView - /path/to/image.jpg`.
@@ -55,6 +81,8 @@ The compiled binary is only **~45 KB**, and compile times are under **1 second**
 | `Ctrl + Y` / `Ctrl + Shift + Z` | Redo last undone action |
 | `R` | Rotate image clockwise (90°) |
 | `L` | Rotate image counter-clockwise (90°) |
+| `Ctrl + 0` | Toggle 100% actual resolution / Fit to window |
+| `Alt + Enter` / `Ctrl + I` | Toggle image properties & metadata panel |
 | `Ctrl + S` | Save image (prompt: Overwrite or Save As…) |
 | `Ctrl + Shift + S` | Direct "Save As…" (file chooser dialog) |
 | `→` / `Space` / `Page Down` | Next image (when not actively drawing) |

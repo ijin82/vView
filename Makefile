@@ -1,5 +1,5 @@
 APP_NAME = vView
-SOURCES = config_manager.vala editor.vala viewer.vala main.vala
+SOURCES = config_manager.vala editor.vala properties_view.vala viewer.vala main.vala
 
 all: build
 
