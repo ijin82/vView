@@ -1,56 +1,125 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <!-- Purple Gradient (Vibrant Neon Purple to Deep Violet) -->
-    <linearGradient id="purple-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#9d4edd" />
-      <stop offset="100%" stop-color="#3c096c" />
+    <!-- Outer Lens Ring Metallic Gradient -->
+    <linearGradient id="v3-barrel-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="35%" stop-color="#1e293b"/>
+      <stop offset="70%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
     </linearGradient>
 
-    <!-- Glossy Neon Orange Gradient for the Handle Grip -->
-    <linearGradient id="orange-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffb703" />
-      <stop offset="100%" stop-color="#fb8500" />
+    <!-- Emerald / Mint Accent Glow -->
+    <linearGradient id="v3-emerald-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
     </linearGradient>
 
-    <!-- Shadow for the Paint Roller to pop out -->
-    <filter id="roller-shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="-4" dy="12" stdDeviation="10" flood-color="#11001c" flood-opacity="0.5" />
+    <!-- Prism V Left Wing Gradient -->
+    <linearGradient id="v3-v-left" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+
+    <!-- Prism V Right Wing Gradient -->
+    <linearGradient id="v3-v-right" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="50%" stop-color="#06b6d4"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+
+    <!-- Deep Lens Interior Radial Gradient -->
+    <radialGradient id="v3-lens-glass" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#092520"/>
+      <stop offset="65%" stop-color="#041411"/>
+      <stop offset="100%" stop-color="#010706"/>
+    </radialGradient>
+
+    <!-- Lens Specular Arc Glare -->
+    <linearGradient id="v3-lens-glare" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Drop Shadow Filter -->
+    <filter id="v3-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#000000" flood-opacity="0.55"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.3"/>
     </filter>
   </defs>
 
-  <!-- Transparent background container, only drawing the purple circle -->
-  <g>
-    <!-- Purple Circle Base -->
-    <circle cx="256" cy="256" r="230" fill="url(#purple-grad)" filter="drop-shadow(0 8px 16px rgba(17, 0, 28, 0.4))" />
+  <!-- Outer Lens Barrel (Circular Base) -->
+  <circle cx="256" cy="256" r="222" fill="url(#v3-barrel-grad)" filter="url(#v3-shadow)"/>
 
-    <!-- Neon Teal Paint Stroke -->
-    <path d="M 120 350 C 180 290, 260 270, 360 210" fill="none" stroke="#00f5d4" stroke-width="72" stroke-linecap="round" opacity="0.9" />
+  <!-- Metal Lens Rim Details -->
+  <circle cx="256" cy="256" r="221" fill="none" stroke="#64748b" stroke-width="2" stroke-opacity="0.5"/>
+  <circle cx="256" cy="256" r="202" fill="none" stroke="#0f172a" stroke-width="8"/>
+  <circle cx="256" cy="256" r="197" fill="none" stroke="#34d399" stroke-width="3" stroke-opacity="0.6"/>
 
-    <!-- Paint Roller Group with Drop Shadow -->
-    <g filter="url(#roller-shadow)">
-      <!-- Main translated and rotated roller group to match the stroke slope -->
-      <g transform="translate(360, 210) rotate(-35)">
-        <!-- Metal Frame -->
-        <path d="M 0 0 L 0 -165 L -90 -165 L -90 -25" fill="none" stroke="#e2e8f0" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
-        
-        <!-- Foam Roller Cylinder (Thicker diameter: 78px, length: 250px) -->
-        <rect x="-129" y="-150" width="78" height="250" rx="16" fill="#ffffff" />
-        
-        <!-- Wet Paint on Foam Roller -->
-        <rect x="-129" y="-105" width="78" height="205" fill="#00f5d4" />
-        <!-- Curved paint boundary at the bottom of the roller -->
-        <path d="M -129 100 Q -90 115 -51 100 L -51 -105 L -129 -105 Z" fill="#00f5d4" />
+  <!-- Precision Lens Notches / Ticks -->
+  <g stroke="#94a3b8" stroke-width="3" stroke-linecap="round" stroke-opacity="0.5">
+    <!-- 12-hour focal marker ticks -->
+    <line x1="256" y1="38" x2="256" y2="52"/>
+    <line x1="256" y1="460" x2="256" y2="474"/>
+    <line x1="38" y1="256" x2="52" y2="256"/>
+    <line x1="460" y1="256" x2="474" y2="256"/>
 
-        <!-- End Caps for the Roller -->
-        <ellipse cx="-90" cy="-150" rx="39" ry="11" fill="#475569" />
-        <ellipse cx="-90" cy="100" rx="39" ry="11" fill="#475569" />
-
-        <!-- Metal Pole Handle (Extended to fit the larger grip) -->
-        <line x1="0" y1="0" x2="75" y2="87.5" stroke="#e2e8f0" stroke-width="14" stroke-linecap="round" />
-        
-        <!-- Larger, Glossy Orange Grip -->
-        <rect x="59" y="42.5" width="32" height="90" rx="16" fill="url(#orange-grad)" transform="rotate(-40 75 87.5)" />
-      </g>
-    </g>
+    <line x1="102" y1="102" x2="112" y2="112"/>
+    <line x1="410" y1="102" x2="400" y2="112"/>
+    <line x1="102" y1="410" x2="112" y2="400"/>
+    <line x1="410" y1="410" x2="400" y2="400"/>
   </g>
+
+  <!-- Optical Glass Element -->
+  <circle cx="256" cy="256" r="190" fill="url(#v3-lens-glass)"/>
+
+  <!-- Inner Aperture Blades (8-blade circular iris) -->
+  <g stroke="#031610" stroke-width="2.5" fill="#0b241c" fill-opacity="0.9">
+    <path d="M 256 90 L 330 150 L 260 210 Z"/>
+    <path d="M 373 139 L 410 225 L 325 240 Z"/>
+    <path d="M 422 256 L 390 345 L 310 290 Z"/>
+    <path d="M 373 373 L 290 415 L 260 330 Z"/>
+    <path d="M 256 422 L 175 385 L 210 300 Z"/>
+    <path d="M 139 373 L 95 295 L 180 270 Z"/>
+    <path d="M 90 256 L 120 170 L 205 220 Z"/>
+    <path d="M 139 139 L 220 95 L 250 180 Z"/>
+  </g>
+
+  <!-- Aperture Iris Opening Glow Circle -->
+  <circle cx="256" cy="256" r="115" fill="none" stroke="#10b981" stroke-width="2" stroke-dasharray="10 6" stroke-opacity="0.4"/>
+
+  <!-- The Bold Floating Prismatic "V" Monogram -->
+  <g id="v3-monogram" filter="drop-shadow(0px 8px 12px rgba(0,0,0,0.7))">
+    <!-- Left Wing of V -->
+    <path d="M 152 168 L 204 168 L 256 324 L 204 324 Z"
+          fill="url(#v3-v-left)"/>
+
+    <!-- Right Wing of V -->
+    <path d="M 360 168 L 308 168 L 256 324 L 308 324 Z"
+          fill="url(#v3-v-right)"/>
+
+    <!-- Center Apex Intersection & Facet -->
+    <polygon points="256,260 286,324 256,368 226,324"
+             fill="#34d399"/>
+
+    <!-- Core Floating Prism Diamond -->
+    <polygon points="256,276 276,324 256,356 236,324"
+             fill="#ffffff" fill-opacity="0.95"/>
+  </g>
+
+  <!-- Viewfinder / Crop Reticle Markings (for Image Viewer / Editor) -->
+  <g stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.85">
+    <!-- Top-left target bracket -->
+    <path d="M 170 196 L 170 170 L 196 170" fill="none"/>
+    <!-- Top-right target bracket -->
+    <path d="M 342 196 L 342 170 L 316 170" fill="none"/>
+    <!-- Bottom center target pointer -->
+    <path d="M 240 390 L 256 376 L 272 390" fill="none"/>
+  </g>
+
+  <!-- Specular Lens Curved Glare -->
+  <path d="M 120 180 A 175 175 0 0 1 392 180 A 165 165 0 0 0 120 180 Z"
+        fill="url(#v3-lens-glare)"/>
+  <circle cx="210" cy="140" r="8" fill="#ffffff" fill-opacity="0.6"/>
 </svg>
