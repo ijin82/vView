@@ -5,7 +5,7 @@ public class VViewApp : Adw.Application {
     private string[] image_files;
     private int current_index = 0;
     private uint cursor_timeout_id = 0;
-    private string target_path = "/home/ijin/Yandex.Disk/images/1920x1080/RDR2/PRDR31796521339_1.jpg";
+    private string? target_path = null;
 
     public VViewApp () {
         Object (
@@ -19,12 +19,16 @@ public class VViewApp : Adw.Application {
         if (args.length > 1) {
             var file = cmd.create_file_for_arg (args[1]);
             target_path = file.get_path ();
+        } else {
+            target_path = null;
         }
 
         if (win == null) {
             activate ();
         } else {
-            load_images (target_path);
+            if (target_path != null) {
+                load_images (target_path);
+            }
             win.present ();
         }
 
@@ -175,8 +179,12 @@ public class VViewApp : Adw.Application {
         });
         ((Gtk.Widget) win).add_controller (key_controller);
 
-        // Load images from directory
-        load_images (target_path);
+        // Load images if target_path was provided
+        if (target_path != null) {
+            load_images (target_path);
+        } else {
+            win.title = "vView";
+        }
 
         win.present ();
     }
@@ -217,6 +225,13 @@ public class VViewApp : Adw.Application {
 
     private void load_images (string target_file) {
         var file = File.new_for_path (target_file);
+
+        if (!file.query_exists ()) {
+            image_files = {};
+            picture.set_paintable (null);
+            win.title = "vView";
+            return;
+        }
 
         string dir_path;
         string initial_filename;
@@ -284,7 +299,14 @@ public class VViewApp : Adw.Application {
         }
 
         var path = image_files[current_index];
-        picture.set_filename (path);
+        try {
+            var file = File.new_for_path (path);
+            var texture = Gdk.Texture.from_file (file);
+            picture.set_paintable (texture);
+        } catch (Error e) {
+            warning ("Could not load image '%s': %s", path, e.message);
+            picture.set_paintable (null);
+        }
 
         win.title = "vView - %s".printf (path);
     }

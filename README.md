@@ -56,7 +56,7 @@ To clone, build, and continue development on a fresh machine (such as **ALT Linu
 
 ### ALT Linux
 
-Run the following command to install all necessary packages:
+Run the following command to install all necessary packages (including WebP image decoding support):
 
 ```bash
 sudo apt-get update && sudo apt-get install -y \
@@ -65,7 +65,8 @@ sudo apt-get update && sudo apt-get install -y \
     gcc \
     vala \
     libgtk4-devel \
-    libadwaita-devel
+    libadwaita-devel \
+    libwebp-pixbuf-loader
 ```
 
 *(Optional: install `gobject-introspection-devel` and `meson` if you plan to introduce GObject Introspection bindings or switch to the Meson build system).*
@@ -76,17 +77,17 @@ sudo apt-get update && sudo apt-get install -y \
 
 * **Ubuntu / Debian:**
   ```bash
-  sudo apt update && sudo apt install -y git make gcc valac libgtk-4-dev libadwaita-1-dev
+  sudo apt update && sudo apt install -y git make gcc valac libgtk-4-dev libadwaita-1-dev webp-pixbuf-loader
   ```
 
 * **Fedora:**
   ```bash
-  sudo dnf install -y git make gcc vala gtk4-devel libadwaita-devel
+  sudo dnf install -y git make gcc vala gtk4-devel libadwaita-devel webp-pixbuf-loader
   ```
 
 * **Arch Linux:**
   ```bash
-  sudo pacman -S --needed git make gcc vala gtk4 libadwaita
+  sudo pacman -S --needed git make gcc vala gtk4 libadwaita webp-pixbuf-loader
   ```
 
 ---
@@ -148,4 +149,17 @@ vView can be launched with a file or directory path argument (absolute or relati
 ./vView ~/Pictures/
 ```
 
-If launched without arguments, it loads the default preset image.
+If launched without arguments, it opens a clean window with no image loaded.
+
+---
+
+## Troubleshooting & Tips
+
+### Missing WebP Thumbnails in Nautilus / File Manager
+If you previously viewed folders containing `.webp` files before installing `libwebp-pixbuf-loader`, Nautilus caches failed generation attempts in `~/.cache/thumbnails/fail/`. 
+
+To reset the thumbnail cache and force immediate thumbnail generation for all WebP files, run:
+
+```bash
+rm -rf ~/.cache/thumbnails/fail/ && nautilus -q
+```
