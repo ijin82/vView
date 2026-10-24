@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="vView.svg" width="160" height="160" alt="Waller Logo" />
+</p>
+
 # vView (Vala View)
 
 **vView** is a lightweight, blazing-fast, and minimalist image viewer for Linux, built with **Vala**, **GTK4**, and **Libadwaita**.
