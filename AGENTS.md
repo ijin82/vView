@@ -15,3 +15,7 @@
 - Keep the binary lightweight and compile times sub-second.
 - Prefer GIO / GLib native APIs for I/O and event handling.
 - Preserve clean separation of concerns and ensure all resource cleanups and event controllers are properly handled.
+
+## Workflow & Testing
+- **Local Installation:** Always run `./install.sh install-lite` (or `make install-lite`) upon completing changes so the user can immediately test the live application without redundant rebuilds.
+- **Git Restrictions:** Do not run `git commit` or `git push` autonomously; all commits and pushes are handled directly by the user.

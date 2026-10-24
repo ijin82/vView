@@ -7,9 +7,11 @@ DESKTOP_DIR="${HOME}/.local/share/applications"
 DESKTOP_FILE="${DESKTOP_DIR}/${APP_NAME}.desktop"
 ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/apps"
 
-install_app() {
-    echo "==> Building ${APP_NAME}..."
-    make build
+copy_files() {
+    if [ ! -f "${APP_NAME}" ]; then
+        echo "==> Binary ${APP_NAME} not found, building..."
+        make build
+    fi
 
     echo "==> Installing binary to ${BIN_DIR}..."
     mkdir -p "${BIN_DIR}"
@@ -56,6 +58,12 @@ EOF
     echo "  It will now appear in GNOME/Nautilus 'Open With...' for images."
 }
 
+install_app() {
+    echo "==> Building ${APP_NAME}..."
+    make build
+    copy_files
+}
+
 uninstall_app() {
     echo "==> Uninstalling ${APP_NAME}..."
     if [ -f "${BIN_DIR}/${APP_NAME}" ]; then
@@ -89,11 +97,14 @@ case "$1" in
     uninstall)
         uninstall_app
         ;;
+    install-lite)
+        copy_files
+        ;;
     install|"")
         install_app
         ;;
     *)
-        echo "Usage: $0 [install|uninstall]"
+        echo "Usage: $0 [install|install-lite|uninstall]"
         exit 1
         ;;
 esac

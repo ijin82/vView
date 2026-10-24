@@ -11,10 +11,13 @@ run: build
 install:
 	./install.sh install
 
+install-lite:
+	./install.sh install-lite
+
 uninstall:
 	./install.sh uninstall
 
 clean:
 	rm -f $(APP_NAME)
 
-.PHONY: all build run install uninstall clean
+.PHONY: all build run install install-lite uninstall clean

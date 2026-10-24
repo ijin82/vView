@@ -1,5 +1,6 @@
 public enum ToolType {
     NONE,
+    LINE,
     ARROW,
     RECTANGLE,
     CIRCLE,
@@ -126,7 +127,12 @@ public class ImageCanvas : Gtk.DrawingArea {
         cr.set_source_rgba (draw_color.red, draw_color.green, draw_color.blue, draw_color.alpha);
         cr.set_line_width (line_width);
 
-        if (current_tool == ToolType.ARROW) {
+        if (current_tool == ToolType.LINE) {
+            cr.set_line_cap (Cairo.LineCap.ROUND);
+            cr.move_to (x1, y1);
+            cr.line_to (x2, y2);
+            cr.stroke ();
+        } else if (current_tool == ToolType.ARROW) {
             draw_arrow_cairo (cr, x1, y1, x2, y2, line_width);
         } else if (current_tool == ToolType.RECTANGLE) {
             double rx = double.min (x1, x2);
@@ -228,26 +234,58 @@ public class ImageCanvas : Gtk.DrawingArea {
     }
 
     private void draw_arrow_cairo (Cairo.Context cr, double x1, double y1, double x2, double y2, double lw) {
-        double angle = Math.atan2 (y2 - y1, x2 - x1);
-        double arrow_len = double.max (15.0, lw * 3.5);
-        double arrow_angle = Math.PI / 6.0;
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double dist = Math.hypot (dx, dy);
+        if (dist < 2.0) return;
 
-        cr.set_line_width (lw);
-        cr.set_line_cap (Cairo.LineCap.ROUND);
-        cr.set_line_join (Cairo.LineJoin.ROUND);
+        double angle = Math.atan2 (dy, dx);
+        double ux = Math.cos (angle);
+        double uy = Math.sin (angle);
+        double nx = -Math.sin (angle);
+        double ny = Math.cos (angle);
 
-        cr.move_to (x1, y1);
-        cr.line_to (x2, y2);
-        cr.stroke ();
+        double hw = lw / 2.0;
+        double head_len = double.max (lw * 2.8, 16.0);
+        if (head_len > dist * 0.75) {
+            head_len = dist * 0.75;
+        }
+        double head_half_w = double.max (head_len * 0.45, lw * 1.3);
 
+        double base_x = x2 - head_len * ux;
+        double base_y = y2 - head_len * uy;
+
+        double wing1_x = base_x + head_half_w * nx;
+        double wing1_y = base_y + head_half_w * ny;
+
+        double wing2_x = base_x - head_half_w * nx;
+        double wing2_y = base_y - head_half_w * ny;
+
+        double shaft_attach_dist = head_len * 0.8;
+        double attach_x = x2 - shaft_attach_dist * ux;
+        double attach_y = y2 - shaft_attach_dist * uy;
+
+        double base1_x = attach_x + hw * nx;
+        double base1_y = attach_y + hw * ny;
+
+        double base2_x = attach_x - hw * nx;
+        double base2_y = attach_y - hw * ny;
+
+        cr.new_path ();
         cr.move_to (x2, y2);
-        cr.line_to (x2 - arrow_len * Math.cos (angle - arrow_angle),
-                    y2 - arrow_len * Math.sin (angle - arrow_angle));
-        cr.line_to (x2 - (arrow_len * 0.75) * Math.cos (angle),
-                    y2 - (arrow_len * 0.75) * Math.sin (angle));
-        cr.line_to (x2 - arrow_len * Math.cos (angle + arrow_angle),
-                    y2 - arrow_len * Math.sin (angle + arrow_angle));
+        cr.line_to (wing2_x, wing2_y);
+        cr.line_to (base2_x, base2_y);
+
+        double start_r_x = x1 - hw * nx;
+        double start_r_y = y1 - hw * ny;
+        cr.line_to (start_r_x, start_r_y);
+
+        cr.arc_negative (x1, y1, hw, angle - Math.PI / 2.0, angle - 3.0 * Math.PI / 2.0);
+
+        cr.line_to (base1_x, base1_y);
+        cr.line_to (wing1_x, wing1_y);
         cr.close_path ();
+
         cr.fill ();
     }
 
@@ -286,7 +324,13 @@ public class ImageCanvas : Gtk.DrawingArea {
                 cr.set_source_rgba (draw_color.red, draw_color.green, draw_color.blue, draw_color.alpha);
                 double scaled_lw = line_width * scale;
 
-                if (current_tool == ToolType.ARROW) {
+                if (current_tool == ToolType.LINE) {
+                    cr.set_line_width (scaled_lw);
+                    cr.set_line_cap (Cairo.LineCap.ROUND);
+                    cr.move_to (start_x, start_y);
+                    cr.line_to (current_x, current_y);
+                    cr.stroke ();
+                } else if (current_tool == ToolType.ARROW) {
                     draw_arrow_cairo (cr, start_x, start_y, current_x, current_y, scaled_lw);
                 } else if (current_tool == ToolType.RECTANGLE) {
                     cr.set_line_width (scaled_lw);
@@ -326,6 +370,7 @@ public class VViewApp : Adw.Application {
     private Gtk.Button redo_button;
 
     // Tool toggle buttons
+    private Gtk.ToggleButton line_btn;
     private Gtk.ToggleButton arrow_btn;
     private Gtk.ToggleButton rect_btn;
     private Gtk.ToggleButton circle_btn;
@@ -348,6 +393,7 @@ public class VViewApp : Adw.Application {
     private int current_index = 0;
     private uint cursor_timeout_id = 0;
     private string? target_path = null;
+    private bool is_loading_settings = true;
 
     public VViewApp () {
         Object (
@@ -387,6 +433,10 @@ public class VViewApp : Adw.Application {
 
         win = new Adw.ApplicationWindow (this);
         win.set_default_size (1000, 700);
+        win.close_request.connect (() => {
+            save_settings ();
+            return false;
+        });
 
         header = new Adw.HeaderBar ();
 
@@ -445,6 +495,23 @@ public class VViewApp : Adw.Application {
         save_button.clicked.connect (prompt_save_image);
         header.pack_end (save_button);
 
+        // Canvas widget for image display and drawing
+        canvas = new ImageCanvas ();
+        canvas.hexpand = true;
+        canvas.vexpand = true;
+
+        canvas.image_modified.connect (() => {
+            if (current_pixbuf != null) {
+                push_undo_snapshot (current_pixbuf);
+            }
+            current_pixbuf = canvas.pixbuf;
+            mark_modified ();
+        });
+
+        canvas.text_requested.connect ((ix, iy) => {
+            prompt_text_dialog (ix, iy);
+        });
+
         // Build Edit Toolbar
         var edit_bar = create_edit_toolbar ();
         edit_revealer = new Gtk.Revealer ();
@@ -470,24 +537,6 @@ public class VViewApp : Adw.Application {
         var toolbar_view = new Adw.ToolbarView ();
         toolbar_view.add_top_bar (header);
         toolbar_view.add_top_bar (edit_revealer);
-
-        // Canvas widget for image display and drawing
-        canvas = new ImageCanvas ();
-        canvas.hexpand = true;
-        canvas.vexpand = true;
-
-        canvas.image_modified.connect (() => {
-            if (current_pixbuf != null) {
-                push_undo_snapshot (current_pixbuf);
-            }
-            current_pixbuf = canvas.pixbuf;
-            mark_modified ();
-        });
-
-        canvas.text_requested.connect ((ix, iy) => {
-            prompt_text_dialog (ix, iy);
-        });
-
         toolbar_view.set_content (canvas);
         win.set_content (toolbar_view);
 
@@ -663,6 +712,9 @@ public class VViewApp : Adw.Application {
         });
         ((Gtk.Widget) win).add_controller (key_controller);
 
+        // Restore persistent settings
+        load_settings ();
+
         // Load images if target_path was provided
         if (target_path != null) {
             load_images (target_path);
@@ -696,20 +748,26 @@ public class VViewApp : Adw.Application {
         box.append (new Gtk.Separator (Gtk.Orientation.VERTICAL));
 
         // Drawing tool group
+        line_btn = new Gtk.ToggleButton ();
+        line_btn.set_child (create_tool_icon ("line"));
+        line_btn.tooltip_text = "Draw Straight Line";
+        line_btn.toggled.connect (() => on_tool_toggled (line_btn, ToolType.LINE));
+        box.append (line_btn);
+
         arrow_btn = new Gtk.ToggleButton ();
-        arrow_btn.icon_name = "call-start-symbolic";
+        arrow_btn.set_child (create_tool_icon ("arrow"));
         arrow_btn.tooltip_text = "Draw Arrow";
         arrow_btn.toggled.connect (() => on_tool_toggled (arrow_btn, ToolType.ARROW));
         box.append (arrow_btn);
 
         rect_btn = new Gtk.ToggleButton ();
-        rect_btn.icon_name = "checkbox-symbolic";
+        rect_btn.set_child (create_tool_icon ("rect"));
         rect_btn.tooltip_text = "Draw Rectangle";
         rect_btn.toggled.connect (() => on_tool_toggled (rect_btn, ToolType.RECTANGLE));
         box.append (rect_btn);
 
         circle_btn = new Gtk.ToggleButton ();
-        circle_btn.icon_name = "media-record-symbolic";
+        circle_btn.set_child (create_tool_icon ("circle"));
         circle_btn.tooltip_text = "Draw Circle";
         circle_btn.toggled.connect (() => on_tool_toggled (circle_btn, ToolType.CIRCLE));
         box.append (circle_btn);
@@ -739,6 +797,9 @@ public class VViewApp : Adw.Application {
             unowned Gdk.RGBA? c = color_btn.get_rgba ();
             if (c != null) {
                 canvas.draw_color = c;
+                if (!is_loading_settings) {
+                    save_settings ();
+                }
             }
         });
         box.append (color_btn);
@@ -752,6 +813,9 @@ public class VViewApp : Adw.Application {
         width_spin.tooltip_text = "Line / Border Width (px)";
         width_spin.value_changed.connect (() => {
             canvas.line_width = width_spin.value;
+            if (!is_loading_settings) {
+                save_settings ();
+            }
         });
         box.append (width_spin);
 
@@ -765,6 +829,9 @@ public class VViewApp : Adw.Application {
         font_btn.notify["font-desc"].connect (() => {
             if (font_btn.font_desc != null) {
                 canvas.font_desc = font_btn.font_desc.to_string ();
+                if (!is_loading_settings) {
+                    save_settings ();
+                }
             }
         });
         box.append (font_btn);
@@ -775,38 +842,254 @@ public class VViewApp : Adw.Application {
         return box;
     }
 
+    private Gtk.Widget create_tool_icon (string tool) {
+        var da = new Gtk.DrawingArea ();
+        da.set_content_width (16);
+        da.set_content_height (16);
+        da.can_target = false;
+        da.set_draw_func ((area, cr, width, height) => {
+            Gdk.RGBA fg = area.get_color ();
+            cr.set_source_rgba (fg.red, fg.green, fg.blue, fg.alpha);
+
+            if (tool == "line") {
+                cr.set_line_width (2.0);
+                cr.set_line_cap (Cairo.LineCap.ROUND);
+                cr.move_to (3.0, 13.0);
+                cr.line_to (13.0, 3.0);
+                cr.stroke ();
+            } else if (tool == "arrow") {
+                cr.set_line_width (2.0);
+                cr.set_line_cap (Cairo.LineCap.ROUND);
+                cr.set_line_join (Cairo.LineJoin.ROUND);
+                cr.move_to (3.0, 13.0);
+                cr.line_to (12.0, 4.0);
+                cr.stroke ();
+                cr.move_to (6.0, 3.0);
+                cr.line_to (13.0, 3.0);
+                cr.line_to (13.0, 10.0);
+                cr.stroke ();
+            } else if (tool == "rect") {
+                cr.set_line_width (1.8);
+                cr.set_line_cap (Cairo.LineCap.ROUND);
+                cr.set_line_join (Cairo.LineJoin.ROUND);
+                cr.rectangle (2.5, 2.5, 11.0, 11.0);
+                cr.stroke ();
+            } else if (tool == "circle") {
+                cr.set_line_width (1.8);
+                cr.arc (8.0, 8.0, 5.5, 0.0, 2.0 * Math.PI);
+                cr.stroke ();
+            }
+        });
+        return da;
+    }
+
     private void on_tool_toggled (Gtk.ToggleButton active_btn, ToolType tool) {
         if (!active_btn.active) {
-            if (canvas.current_tool == tool) {
+            if (canvas != null && canvas.current_tool == tool) {
                 canvas.current_tool = ToolType.NONE;
             }
             return;
         }
 
+        if (active_btn != line_btn && line_btn.active) line_btn.active = false;
         if (active_btn != arrow_btn && arrow_btn.active) arrow_btn.active = false;
         if (active_btn != rect_btn && rect_btn.active) rect_btn.active = false;
         if (active_btn != circle_btn && circle_btn.active) circle_btn.active = false;
         if (active_btn != redact_btn && redact_btn.active) redact_btn.active = false;
         if (active_btn != text_btn && text_btn.active) text_btn.active = false;
 
-        canvas.current_tool = tool;
+        if (canvas != null) {
+            if (edit_toggle_button != null && edit_toggle_button.active) {
+                canvas.current_tool = tool;
+            } else {
+                canvas.current_tool = ToolType.NONE;
+            }
+        }
+
+        if (!is_loading_settings) {
+            save_settings ();
+        }
+    }
+
+    private void apply_active_tool_to_canvas () {
+        if (canvas == null) return;
+        if (line_btn.active) canvas.current_tool = ToolType.LINE;
+        else if (arrow_btn.active) canvas.current_tool = ToolType.ARROW;
+        else if (rect_btn.active) canvas.current_tool = ToolType.RECTANGLE;
+        else if (circle_btn.active) canvas.current_tool = ToolType.CIRCLE;
+        else if (redact_btn.active) canvas.current_tool = ToolType.REDACT;
+        else if (text_btn.active) canvas.current_tool = ToolType.TEXT;
+        else {
+            arrow_btn.active = true;
+            canvas.current_tool = ToolType.ARROW;
+        }
     }
 
     private void toggle_edit_mode () {
         bool active = edit_toggle_button.active;
         edit_revealer.reveal_child = active;
-        if (!active) {
-            canvas.current_tool = ToolType.NONE;
-        } else {
-            if (arrow_btn.active) canvas.current_tool = ToolType.ARROW;
-            else if (rect_btn.active) canvas.current_tool = ToolType.RECTANGLE;
-            else if (circle_btn.active) canvas.current_tool = ToolType.CIRCLE;
-            else if (redact_btn.active) canvas.current_tool = ToolType.REDACT;
-            else if (text_btn.active) canvas.current_tool = ToolType.TEXT;
-            else {
-                arrow_btn.active = true;
-                canvas.current_tool = ToolType.ARROW;
+        if (canvas != null) {
+            if (!active) {
+                canvas.current_tool = ToolType.NONE;
+            } else {
+                apply_active_tool_to_canvas ();
             }
+        }
+
+        if (!is_loading_settings) {
+            save_settings ();
+        }
+    }
+
+    private string get_config_file_path () {
+        return GLib.Path.build_filename (GLib.Environment.get_user_config_dir (), "vView", "config");
+    }
+
+    private string get_active_tool_name () {
+        if (line_btn.active) return "line";
+        if (rect_btn.active) return "rectangle";
+        if (circle_btn.active) return "circle";
+        if (redact_btn.active) return "redact";
+        if (text_btn.active) return "text";
+        return "arrow";
+    }
+
+    private void select_tool_by_name (string name) {
+        line_btn.active = (name == "line");
+        arrow_btn.active = (name == "arrow");
+        rect_btn.active = (name == "rectangle");
+        circle_btn.active = (name == "circle");
+        redact_btn.active = (name == "redact");
+        text_btn.active = (name == "text");
+
+        if (!line_btn.active && !arrow_btn.active && !rect_btn.active && !circle_btn.active && !redact_btn.active && !text_btn.active) {
+            arrow_btn.active = true;
+        }
+
+        if (edit_toggle_button != null && edit_toggle_button.active) {
+            apply_active_tool_to_canvas ();
+        }
+    }
+
+    private void load_settings () {
+        is_loading_settings = true;
+        var kf = new GLib.KeyFile ();
+        var path = get_config_file_path ();
+
+        try {
+            kf.load_from_file (path, GLib.KeyFileFlags.NONE);
+        } catch (Error e) {
+            is_loading_settings = false;
+            return;
+        }
+
+        // Window size and state
+        try {
+            int w = kf.get_integer ("Window", "width");
+            int h = kf.get_integer ("Window", "height");
+            if (w >= 300 && h >= 200) {
+                win.set_default_size (w, h);
+            }
+        } catch (Error e) {}
+
+        try {
+            bool maximized = kf.get_boolean ("Window", "maximized");
+            if (maximized) {
+                win.maximize ();
+            }
+        } catch (Error e) {}
+
+        // Tool selection
+        try {
+            string tool_name = kf.get_string ("Editor", "tool");
+            select_tool_by_name (tool_name);
+        } catch (Error e) {}
+
+        // Stroke & Text Color
+        try {
+            string color_str = kf.get_string ("Editor", "color");
+            Gdk.RGBA c = {};
+            if (c.parse (color_str)) {
+                canvas.draw_color = c;
+                color_btn.set_rgba (c);
+            }
+        } catch (Error e) {}
+
+        // Line width
+        try {
+            double lw = kf.get_double ("Editor", "line_width");
+            if (lw >= 1.0 && lw <= 50.0) {
+                canvas.line_width = lw;
+                width_spin.value = lw;
+            }
+        } catch (Error e) {}
+
+        // Font description
+        try {
+            string fd = kf.get_string ("Editor", "font_desc");
+            if (fd != null && fd.strip () != "") {
+                canvas.font_desc = fd;
+                font_btn.font_desc = Pango.FontDescription.from_string (fd);
+            }
+        } catch (Error e) {}
+
+        // Edit toolbar open state
+        try {
+            bool edit_mode = kf.get_boolean ("Editor", "edit_mode");
+            edit_toggle_button.active = edit_mode;
+            edit_revealer.reveal_child = edit_mode;
+            if (edit_mode) {
+                apply_active_tool_to_canvas ();
+            } else if (canvas != null) {
+                canvas.current_tool = ToolType.NONE;
+            }
+        } catch (Error e) {
+            edit_toggle_button.active = false;
+            edit_revealer.reveal_child = false;
+            if (canvas != null) {
+                canvas.current_tool = ToolType.NONE;
+            }
+        }
+
+        is_loading_settings = false;
+    }
+
+    private void save_settings () {
+        if (is_loading_settings || canvas == null || win == null) return;
+
+        var kf = new GLib.KeyFile ();
+        var path = get_config_file_path ();
+
+        try {
+            kf.load_from_file (path, GLib.KeyFileFlags.NONE);
+        } catch (Error e) {}
+
+        if (!win.fullscreened) {
+            int w = win.get_width ();
+            int h = win.get_height ();
+            if (w < 200 || h < 200) {
+                w = win.default_width;
+                h = win.default_height;
+            }
+            if (w >= 200 && h >= 200) {
+                kf.set_integer ("Window", "width", w);
+                kf.set_integer ("Window", "height", h);
+            }
+            kf.set_boolean ("Window", "maximized", win.maximized);
+        }
+
+        kf.set_string ("Editor", "tool", get_active_tool_name ());
+        kf.set_string ("Editor", "color", canvas.draw_color.to_string ());
+        kf.set_double ("Editor", "line_width", canvas.line_width);
+        kf.set_string ("Editor", "font_desc", canvas.font_desc);
+        kf.set_boolean ("Editor", "edit_mode", edit_toggle_button != null ? edit_toggle_button.active : false);
+
+        try {
+            string dir = GLib.Path.get_dirname (path);
+            GLib.DirUtils.create_with_parents (dir, 0755);
+            kf.save_to_file (path);
+        } catch (Error e) {
+            warning ("Failed to save settings to '%s': %s", path, e.message);
         }
     }
 
@@ -1179,6 +1462,11 @@ public class VViewApp : Adw.Application {
         }
 
         win.title = "vView - %s".printf (path);
+    }
+
+    protected override void shutdown () {
+        save_settings ();
+        base.shutdown ();
     }
 
     public static int main (string[] args) {
