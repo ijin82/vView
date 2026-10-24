@@ -24,8 +24,16 @@ The compiled binary is only **~45 KB**, and compile times are under **1 second**
   * A prominent **Save** button appears in the header bar as soon as changes are made.
   * Choice between **Overwrite** (save directly into the current file) and **Save As…** (choose directory and filename via native `Gtk.FileDialog`).
   * Preserves original file format and high visual fidelity (JPEG/WebP quality 95, lossless PNG/GIF).
+* ✏️ **Annotation & Editing Toolbar:**
+  * Toggle the editing toolbar underneath the header bar (`E` or edit button).
+  * **Draw Arrow:** Highlight details with crisp, scalable arrows.
+  * **Draw Rectangle & Circle:** Frame areas of interest.
+  * **Redact Zone (Mosaic Pixelation):** Select any rectangular region to pixelate sensitive text or personal info.
+  * **Insert Text:** Click anywhere on the image to place custom text labels using any installed system font.
+  * **Color & Stroke Pickers:** Choose any stroke color and customize line width (1 to 50 px).
+  * **Full Undo / Redo:** Step back and forth through edits (`Ctrl + Z` / `Ctrl + Y`).
 * 🖱️ **Mouse Scroll Navigation:** Instantly switch to the next/previous image by scrolling the mouse wheel.
-* ⌨️ **Ergonomic Shortcuts:** Intuitive keyboard navigation.
+* ⌨️ **Ergonomic Shortcuts & Wide Info Dialog:** Intuitive keyboard navigation and a wide, readable shortcuts overlay (`F1` or `[i]`).
 * 🏷️ **Clear Window Title:** Displays the full path of the current image: `vView - /path/to/image.jpg`.
 
 ---
@@ -37,13 +45,16 @@ The compiled binary is only **~45 KB**, and compile times are under **1 second**
 | Key | Action |
 | :--- | :--- |
 | `F` | Toggle fullscreen mode |
-| `Escape` | Exit fullscreen mode |
+| `Escape` | Exit fullscreen mode or hide editing toolbar |
+| `E` | Toggle editing & annotation toolbar |
+| `Ctrl + Z` | Undo last edit or rotation |
+| `Ctrl + Y` / `Ctrl + Shift + Z` | Redo last undone action |
 | `R` | Rotate image clockwise (90°) |
 | `L` | Rotate image counter-clockwise (90°) |
 | `Ctrl + S` | Save image (prompt: Overwrite or Save As…) |
 | `Ctrl + Shift + S` | Direct "Save As…" (file chooser dialog) |
-| `→` / `Space` / `Page Down` | Next image |
-| `←` / `Page Up` | Previous image |
+| `→` / `Space` / `Page Down` | Next image (when not actively drawing) |
+| `←` / `Page Up` | Previous image (when not actively drawing) |
 | `Home` | Jump to first image in directory |
 | `End` | Jump to last image in directory |
 | `F1` | Show keyboard shortcuts & info dialog |
