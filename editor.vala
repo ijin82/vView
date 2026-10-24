@@ -5,6 +5,7 @@ public enum ToolType {
     ARROW,
     RECTANGLE,
     CIRCLE,
+    STEP_BADGE,
     REDACT,
     TEXT
 }
@@ -20,6 +21,7 @@ public class AnnotationItem : GLib.Object {
     public double line_width;
     public string text;
     public string font_desc;
+    public int step_number;
 
     public AnnotationItem (ToolType t = ToolType.NONE) {
         this.tool_type = t;
@@ -28,6 +30,7 @@ public class AnnotationItem : GLib.Object {
         this.line_width = 4.0;
         this.text = "";
         this.font_desc = "Sans Bold 20";
+        this.step_number = 0;
     }
 
     public AnnotationItem copy () {
@@ -41,6 +44,7 @@ public class AnnotationItem : GLib.Object {
         c.line_width = this.line_width;
         c.text = this.text;
         c.font_desc = this.font_desc;
+        c.step_number = this.step_number;
         return c;
     }
 
@@ -101,6 +105,27 @@ public class AnnotationItem : GLib.Object {
             by = y1 - pad;
             bw = tw + pad * 2.0;
             bh = th + pad * 2.0;
+            return;
+        }
+
+        if (tool_type == ToolType.STEP_BADGE) {
+            double fs = get_font_size_px ();
+            double r = double.max (fs * 0.85 + 4.0, 16.0);
+            if (pango_ctx != null) {
+                var layout = new Pango.Layout (pango_ctx);
+                var desc = Pango.FontDescription.from_string (font_desc);
+                layout.set_font_description (desc);
+                layout.set_text (text, -1);
+                Pango.Rectangle logical_rect;
+                layout.get_pixel_extents (null, out logical_rect);
+                double tw = (double) logical_rect.width;
+                double th = (double) logical_rect.height;
+                r = double.max (r, double.max (tw, th) / 2.0 + 4.0);
+            }
+            bx = x1 - r;
+            by = y1 - r;
+            bw = r * 2.0;
+            bh = r * 2.0;
             return;
         }
 
@@ -214,6 +239,51 @@ public class AnnotationItem : GLib.Object {
 
             cr.set_source_rgba (stroke_color.red, stroke_color.green, stroke_color.blue, stroke_color.alpha);
             cr.move_to (sx1, sy1);
+            Pango.cairo_show_layout (cr, layout);
+        } else if (tool_type == ToolType.STEP_BADGE) {
+            var layout = Pango.cairo_create_layout (cr);
+            var desc = Pango.FontDescription.from_string (font_desc);
+            int orig_size = desc.get_size ();
+            bool is_absolute = desc.get_size_is_absolute ();
+            if (scale != 1.0) {
+                if (is_absolute) {
+                    desc.set_absolute_size (orig_size * scale);
+                } else {
+                    desc.set_size ((int) (orig_size * scale));
+                }
+            }
+            layout.set_font_description (desc);
+            layout.set_text (text, -1);
+
+            Pango.Rectangle logical_rect;
+            layout.get_pixel_extents (null, out logical_rect);
+            double tw = (double) logical_rect.width;
+            double th = (double) logical_rect.height;
+
+            double base_fs = get_font_size_px ();
+            double r = double.max (double.max (tw, th) / 2.0 + 4.0 * scale, (base_fs * 0.85 + 4.0) * scale);
+            r = double.max (r, 16.0 * scale);
+
+            // Draw circle fill
+            cr.save ();
+            if (bg_color.alpha > 0.05f) {
+                cr.set_source_rgba (bg_color.red, bg_color.green, bg_color.blue, bg_color.alpha);
+            } else {
+                cr.set_source_rgba (1.0, 1.0, 1.0, 1.0);
+            }
+            cr.arc (sx1, sy1, r, 0, 2.0 * Math.PI);
+            cr.fill ();
+
+            // Draw circle dark border
+            cr.set_source_rgba (0.1, 0.1, 0.1, 0.95);
+            cr.set_line_width (1.5 * scale);
+            cr.arc (sx1, sy1, r, 0, 2.0 * Math.PI);
+            cr.stroke ();
+            cr.restore ();
+
+            // Draw centered number
+            cr.set_source_rgba (stroke_color.red, stroke_color.green, stroke_color.blue, stroke_color.alpha);
+            cr.move_to (sx1 - tw / 2.0, sy1 - th / 2.0);
             Pango.cairo_show_layout (cr, layout);
         }
 
@@ -339,6 +409,13 @@ public class ImageCanvas : Gtk.DrawingArea {
     private double text_pending_iy = 0;
     private AnnotationItem? text_pending_item = null;
 
+    // Step badge placement vs drag support
+    private bool step_pending_click = false;
+    private bool is_dragging_step = false;
+    private double step_pending_ix = 0;
+    private double step_pending_iy = 0;
+    private AnnotationItem? step_pending_item = null;
+
     public signal void before_action_applied ();
     public signal void image_modified ();
     public signal void text_requested (double img_x, double img_y, AnnotationItem? existing_item);
@@ -346,6 +423,15 @@ public class ImageCanvas : Gtk.DrawingArea {
 
     public void remove_shape (AnnotationItem item) {
         before_action_applied ();
+        if (item.tool_type == ToolType.STEP_BADGE) {
+            int deleted_num = item.step_number;
+            foreach (unowned AnnotationItem it in shapes) {
+                if (it.tool_type == ToolType.STEP_BADGE && it.step_number > deleted_num) {
+                    it.step_number--;
+                    it.text = it.step_number.to_string ();
+                }
+            }
+        }
         unowned GLib.List<AnnotationItem>? link = shapes.find (item);
         if (link != null) {
             shapes.delete_link (link);
@@ -391,6 +477,7 @@ public class ImageCanvas : Gtk.DrawingArea {
             is_moving_element = false;
             is_panning = false;
             text_pending_click = false;
+            step_pending_click = false;
             queue_draw ();
         });
         add_controller (drag);
@@ -700,6 +787,24 @@ public class ImageCanvas : Gtk.DrawingArea {
             return;
         }
 
+        if (current_tool == ToolType.STEP_BADGE) {
+            var hit = find_shape_at (ix, iy);
+            step_pending_click = true;
+            is_dragging_step = false;
+            step_pending_ix = ix;
+            step_pending_iy = iy;
+            step_pending_item = (hit != null && hit.tool_type == ToolType.STEP_BADGE) ? hit : null;
+            start_x = x;
+            start_y = y;
+            if (step_pending_item != null) {
+                selected_shape = step_pending_item;
+                move_prev_ix = ix;
+                move_prev_iy = iy;
+            }
+            queue_draw ();
+            return;
+        }
+
         selected_shape = null;
         is_dragging = true;
         start_x = x;
@@ -724,6 +829,29 @@ public class ImageCanvas : Gtk.DrawingArea {
                     double dy = iy - move_prev_iy;
                     if (dx != 0 || dy != 0) {
                         text_pending_item.translate (dx, dy);
+                        move_prev_ix = ix;
+                        move_prev_iy = iy;
+                        element_actually_moved = true;
+                        queue_draw ();
+                    }
+                }
+            }
+            return;
+        }
+
+        if (step_pending_click) {
+            if (Math.hypot (offset_x, offset_y) > 4.0) {
+                if (!is_dragging_step && step_pending_item != null) {
+                    before_action_applied ();
+                }
+                is_dragging_step = true;
+                if (step_pending_item != null) {
+                    double ix, iy;
+                    widget_to_image (start_x + offset_x, start_y + offset_y, out ix, out iy);
+                    double dx = ix - move_prev_ix;
+                    double dy = iy - move_prev_iy;
+                    if (dx != 0 || dy != 0) {
+                        step_pending_item.translate (dx, dy);
                         move_prev_ix = ix;
                         move_prev_iy = iy;
                         element_actually_moved = true;
@@ -797,6 +925,33 @@ public class ImageCanvas : Gtk.DrawingArea {
                     text_requested (item.x1, item.y1, item);
                 } else {
                     text_requested (px, py, null);
+                }
+            }
+            queue_draw ();
+            return;
+        }
+
+        if (step_pending_click) {
+            bool was_dragging = is_dragging_step;
+            var item = step_pending_item;
+            double px = step_pending_ix;
+            double py = step_pending_iy;
+
+            step_pending_click = false;
+            is_dragging_step = false;
+            step_pending_item = null;
+
+            if (was_dragging) {
+                if (element_actually_moved) {
+                    element_actually_moved = false;
+                    image_modified ();
+                }
+            } else {
+                // Click without dragging: if clicked existing badge, select it; if clicked empty space, place next badge!
+                if (item != null) {
+                    selected_shape = item;
+                } else {
+                    place_step_badge (px, py);
                 }
             }
             queue_draw ();
@@ -886,6 +1041,34 @@ public class ImageCanvas : Gtk.DrawingArea {
             shapes.append (item);
             selected_shape = item;
         }
+        image_modified ();
+        queue_draw ();
+    }
+
+    public int get_next_step_number () {
+        int max_num = 0;
+        foreach (unowned AnnotationItem it in shapes) {
+            if (it.tool_type == ToolType.STEP_BADGE && it.step_number > max_num) {
+                max_num = it.step_number;
+            }
+        }
+        return max_num + 1;
+    }
+
+    public void place_step_badge (double ix, double iy) {
+        if (base_pixbuf == null) return;
+        before_action_applied ();
+        int num = get_next_step_number ();
+        var item = new AnnotationItem (ToolType.STEP_BADGE);
+        item.x1 = ix;
+        item.y1 = iy;
+        item.step_number = num;
+        item.text = num.to_string ();
+        item.stroke_color = text_color;
+        item.bg_color = text_bg_color;
+        item.font_desc = font_desc;
+        shapes.append (item);
+        selected_shape = item;
         image_modified ();
         queue_draw ();
     }
@@ -1143,6 +1326,7 @@ public class EditorManager : GLib.Object {
     public Gtk.ToggleButton arrow_btn;
     public Gtk.ToggleButton rect_btn;
     public Gtk.ToggleButton circle_btn;
+    public Gtk.ToggleButton step_btn;
     public Gtk.ToggleButton redact_btn;
     public Gtk.ToggleButton text_btn;
 
@@ -1294,6 +1478,13 @@ public class EditorManager : GLib.Object {
         circle_btn.tooltip_text = "Draw Circle";
         circle_btn.toggled.connect (() => on_tool_toggled (circle_btn, ToolType.CIRCLE));
         box.append (circle_btn);
+
+        step_btn = new Gtk.ToggleButton ();
+        step_btn.add_css_class ("image-button");
+        step_btn.set_child (create_tool_icon ("step"));
+        step_btn.tooltip_text = "Numbered Step Badge (1, 2, 3...)";
+        step_btn.toggled.connect (() => on_tool_toggled (step_btn, ToolType.STEP_BADGE));
+        box.append (step_btn);
 
         redact_btn = new Gtk.ToggleButton ();
         redact_btn.icon_name = "view-conceal-symbolic";
@@ -1456,6 +1647,19 @@ public class EditorManager : GLib.Object {
                 cr.set_line_width (1.8);
                 cr.arc (cx, cy, 6.0, 0.0, 2.0 * Math.PI);
                 cr.stroke ();
+            } else if (tool == "step") {
+                cr.set_line_width (1.4);
+                cr.arc (cx, cy, 6.5, 0.0, 2.0 * Math.PI);
+                cr.stroke ();
+
+                var layout = Pango.cairo_create_layout (cr);
+                var desc = Pango.FontDescription.from_string ("Sans Bold 8");
+                layout.set_font_description (desc);
+                layout.set_text ("1", -1);
+                Pango.Rectangle lrect;
+                layout.get_pixel_extents (null, out lrect);
+                cr.move_to (cx - (double) lrect.width / 2.0, cy - (double) lrect.height / 2.0);
+                Pango.cairo_show_layout (cr, layout);
             }
         });
         return da;
@@ -1467,7 +1671,7 @@ public class EditorManager : GLib.Object {
         if (!active_btn.active) {
             // Keep the tool active if user tries to uncheck the active tool without picking another
             bool any_active = move_btn.active || line_btn.active || arrow_btn.active ||
-                              rect_btn.active || circle_btn.active || redact_btn.active || text_btn.active;
+                              rect_btn.active || circle_btn.active || step_btn.active || redact_btn.active || text_btn.active;
             if (!any_active) {
                 is_updating_tools = true;
                 active_btn.active = true;
@@ -1482,6 +1686,7 @@ public class EditorManager : GLib.Object {
         if (active_btn != arrow_btn && arrow_btn.active) arrow_btn.active = false;
         if (active_btn != rect_btn && rect_btn.active) rect_btn.active = false;
         if (active_btn != circle_btn && circle_btn.active) circle_btn.active = false;
+        if (active_btn != step_btn && step_btn.active) step_btn.active = false;
         if (active_btn != redact_btn && redact_btn.active) redact_btn.active = false;
         if (active_btn != text_btn && text_btn.active) text_btn.active = false;
         is_updating_tools = false;
@@ -1504,6 +1709,7 @@ public class EditorManager : GLib.Object {
         if (line_btn.active) return "line";
         if (rect_btn.active) return "rectangle";
         if (circle_btn.active) return "circle";
+        if (step_btn.active) return "step";
         if (redact_btn.active) return "redact";
         if (text_btn.active) return "text";
         return "arrow";
@@ -1516,10 +1722,11 @@ public class EditorManager : GLib.Object {
         arrow_btn.active = (name == "arrow");
         rect_btn.active = (name == "rectangle");
         circle_btn.active = (name == "circle");
+        step_btn.active = (name == "step");
         redact_btn.active = (name == "redact");
         text_btn.active = (name == "text");
 
-        if (!move_btn.active && !line_btn.active && !arrow_btn.active && !rect_btn.active && !circle_btn.active && !redact_btn.active && !text_btn.active) {
+        if (!move_btn.active && !line_btn.active && !arrow_btn.active && !rect_btn.active && !circle_btn.active && !step_btn.active && !redact_btn.active && !text_btn.active) {
             arrow_btn.active = true;
         }
         is_updating_tools = false;
@@ -1534,6 +1741,7 @@ public class EditorManager : GLib.Object {
         else if (arrow_btn.active) canvas.current_tool = ToolType.ARROW;
         else if (rect_btn.active) canvas.current_tool = ToolType.RECTANGLE;
         else if (circle_btn.active) canvas.current_tool = ToolType.CIRCLE;
+        else if (step_btn.active) canvas.current_tool = ToolType.STEP_BADGE;
         else if (redact_btn.active) canvas.current_tool = ToolType.REDACT;
         else if (text_btn.active) canvas.current_tool = ToolType.TEXT;
         else {
@@ -1556,6 +1764,9 @@ public class EditorManager : GLib.Object {
                 break;
             case ToolType.CIRCLE:
                 shape_name = "circle";
+                break;
+            case ToolType.STEP_BADGE:
+                shape_name = "step badge";
                 break;
             case ToolType.TEXT:
                 shape_name = "text";

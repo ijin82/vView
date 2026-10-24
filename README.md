@@ -34,6 +34,7 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
 
 * ✏️ **Straight Lines & Scalable Arrows:** Direct attention to specific UI elements or details with clean, anti-aliased directional arrows and lines.
 * 🔲 **Shapes (Rectangle & Circle):** Highlight or frame regions of interest with adjustable stroke thickness.
+* 🔢 **Numbered Step Badges (1, 2, 3...):** Sequentially number steps and workflows on screenshots with auto-incrementing numbered circles. Badges automatically renumber if an intermediate badge is deleted, and can be moved or customized with custom fonts and colors.
 * 💬 **Quick Text Notes & Badges:** Click anywhere on the image to type notes and labels. Features background badges for readability against any background and full system font selection (`FontChooserDialog`).
 * ⬛ **Redaction & Privacy Masking (Mosaic Pixelation):** Drag a box over sensitive information (passwords, email addresses, personal data) to apply smooth mosaic pixelation.
 * 🖐️ **Select & Move:** Reposition any annotation item after drawing it.
