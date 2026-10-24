@@ -51,8 +51,11 @@ public class VViewApp : Adw.Application {
 
         config_manager.load ();
 
+        Gtk.Window.set_default_icon_name ("vView");
+
         win = new Adw.ApplicationWindow (this);
         win.set_default_size (1000, 700);
+        win.set_icon_name ("vView");
         win.close_request.connect (() => {
             save_window_settings ();
             win = null;

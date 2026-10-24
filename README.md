@@ -77,7 +77,7 @@ To clone, build, and continue development on a fresh machine (such as **ALT Linu
 
 ### ALT Linux
 
-Run the following command to install all necessary packages (including WebP image decoding support):
+Run the following command to install all necessary packages (including WebP decoding and icon generation support):
 
 ```bash
 sudo apt-get update && sudo apt-get install -y \
@@ -87,7 +87,10 @@ sudo apt-get update && sudo apt-get install -y \
     vala \
     libgtk4-devel \
     libadwaita-devel \
-    libwebp-pixbuf-loader
+    libwebp-pixbuf-loader \
+    python3-module-pycairo \
+    python3-module-pygobject3 \
+    librsvg-gir
 ```
 
 *(Optional: install `gobject-introspection-devel` and `meson` if you plan to introduce GObject Introspection bindings or switch to the Meson build system).*
@@ -98,17 +101,17 @@ sudo apt-get update && sudo apt-get install -y \
 
 * **Ubuntu / Debian:**
   ```bash
-  sudo apt update && sudo apt install -y git make gcc valac libgtk-4-dev libadwaita-1-dev webp-pixbuf-loader
+  sudo apt update && sudo apt install -y git make gcc valac libgtk-4-dev libadwaita-1-dev webp-pixbuf-loader python3-cairo python3-gi gir1.2-rsvg-2.0
   ```
 
 * **Fedora:**
   ```bash
-  sudo dnf install -y git make gcc vala gtk4-devel libadwaita-devel webp-pixbuf-loader
+  sudo dnf install -y git make gcc vala gtk4-devel libadwaita-devel webp-pixbuf-loader python3-cairo python3-gobject librsvg2
   ```
 
 * **Arch Linux:**
   ```bash
-  sudo pacman -S --needed git make gcc vala gtk4 libadwaita webp-pixbuf-loader
+  sudo pacman -S --needed git make gcc vala gtk4 libadwaita webp-pixbuf-loader python-cairo python-gobject librsvg
   ```
 
 ---
