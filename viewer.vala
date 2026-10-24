@@ -4,6 +4,7 @@ public class ViewerController : GLib.Object {
     public EditorManager editor { get; construct set; }
     public Gtk.Button save_button { get; construct set; }
     public Gtk.ToggleButton edit_toggle_button { get; construct set; }
+    public ConfigManager config_manager { get; construct set; }
 
     public string[] image_files;
     public int current_index = 0;
@@ -12,19 +13,32 @@ public class ViewerController : GLib.Object {
     private uint cursor_timeout_id = 0;
     public PropertiesView? properties_view { get; set; default = null; }
 
-    public ViewerController (Adw.ApplicationWindow win, ImageCanvas canvas, EditorManager editor, Gtk.Button save_button, Gtk.ToggleButton edit_toggle_button) {
+    private uint slideshow_timeout_id = 0;
+    public bool is_slideshow_running { get; private set; default = false; }
+    public signal void slideshow_toggled (bool running);
+
+    public ViewerController (Adw.ApplicationWindow win, ImageCanvas canvas, EditorManager editor, Gtk.Button save_button, Gtk.ToggleButton edit_toggle_button, ConfigManager config_manager) {
         Object (
             win: win,
             canvas: canvas,
             editor: editor,
             save_button: save_button,
-            edit_toggle_button: edit_toggle_button
+            edit_toggle_button: edit_toggle_button,
+            config_manager: config_manager
         );
 
         image_files = {};
 
+        canvas.always_fit_to_window = config_manager.always_fit_to_window;
+
         editor.state_changed.connect (() => {
             mark_modified ();
+        });
+
+        edit_toggle_button.toggled.connect (() => {
+            if (edit_toggle_button.active && is_slideshow_running) {
+                stop_slideshow ();
+            }
         });
     }
 
@@ -130,6 +144,10 @@ public class ViewerController : GLib.Object {
             }
         }
         image_files = new_files;
+
+        if (image_files.length <= 1 && is_slideshow_running) {
+            stop_slideshow ();
+        }
 
         if (image_files.length == 0) {
             current_index = 0;
@@ -266,6 +284,105 @@ public class ViewerController : GLib.Object {
         });
     }
 
+    public void start_slideshow () {
+        if (is_slideshow_running || image_files.length <= 1) return;
+        is_slideshow_running = true;
+        if (edit_toggle_button.active) {
+            edit_toggle_button.active = false;
+        }
+        slideshow_toggled (true);
+        reset_slideshow_timer ();
+    }
+
+    public void stop_slideshow () {
+        if (!is_slideshow_running) return;
+        is_slideshow_running = false;
+        if (slideshow_timeout_id != 0) {
+            Source.remove (slideshow_timeout_id);
+            slideshow_timeout_id = 0;
+        }
+        slideshow_toggled (false);
+    }
+
+    public void toggle_slideshow () {
+        if (is_slideshow_running) {
+            stop_slideshow ();
+        } else {
+            start_slideshow ();
+        }
+    }
+
+    public void reset_slideshow_timer () {
+        if (!is_slideshow_running) return;
+        if (slideshow_timeout_id != 0) {
+            Source.remove (slideshow_timeout_id);
+            slideshow_timeout_id = 0;
+        }
+        int sec = config_manager.slideshow_interval;
+        if (sec < 1) sec = 1;
+        if (sec > 60) sec = 60;
+
+        slideshow_timeout_id = Timeout.add_seconds (sec, () => {
+            if (!is_slideshow_running) {
+                slideshow_timeout_id = 0;
+                return Source.REMOVE;
+            }
+            if (image_files.length > 0) {
+                show_image (current_index + 1);
+            }
+            return Source.CONTINUE;
+        });
+    }
+
+    public void prompt_preferences_dialog () {
+        var dialog = new Adw.PreferencesWindow ();
+        dialog.title = "Preferences";
+        dialog.set_transient_for (win);
+        dialog.set_modal (true);
+        dialog.set_default_size (550, 480);
+
+        var page = new Adw.PreferencesPage ();
+
+        // Display Group
+        var display_group = new Adw.PreferencesGroup ();
+        display_group.title = "Display";
+        display_group.description = "Image scaling and sizing behavior";
+
+        var fit_row = new Adw.SwitchRow ();
+        fit_row.title = "Always fit image to window";
+        fit_row.subtitle = "Scale small images to fill window instead of displaying at 100% actual size";
+        fit_row.active = config_manager.always_fit_to_window;
+        fit_row.notify["active"].connect (() => {
+            config_manager.always_fit_to_window = fit_row.active;
+            canvas.always_fit_to_window = fit_row.active;
+            config_manager.save ();
+        });
+        display_group.add (fit_row);
+        page.add (display_group);
+
+        // Slideshow Group
+        var slideshow_group = new Adw.PreferencesGroup ();
+        slideshow_group.title = "Slideshow";
+        slideshow_group.description = "Slideshow playback parameters";
+
+        var interval_row = new Adw.SpinRow.with_range (1.0, 60.0, 1.0);
+        interval_row.title = "Slide duration (seconds)";
+        interval_row.subtitle = "Time each image is shown before advancing to the next";
+        interval_row.set_value ((double) config_manager.slideshow_interval);
+        interval_row.notify["value"].connect (() => {
+            config_manager.slideshow_interval = (int) interval_row.value;
+            config_manager.save ();
+            if (is_slideshow_running) {
+                reset_slideshow_timer ();
+            }
+        });
+        slideshow_group.add (interval_row);
+        page.add (slideshow_group);
+
+        dialog.add (page);
+        dialog.present ();
+    }
+
     public void load_images (string target_file) {
         var file = File.new_for_path (target_file);
 
@@ -383,7 +500,9 @@ public class ViewerController : GLib.Object {
         add_shortcut_row (group, "Previous Image", "← / Scroll Up");
         add_shortcut_row (group, "Zoom In / Out", "Ctrl + Wheel / Ctrl + [+/-]");
         add_shortcut_row (group, "Zoom 100% / Fit", "Ctrl + 0");
+        add_shortcut_row (group, "Toggle Slideshow", "F5");
         add_shortcut_row (group, "Image Properties", "Alt + Enter / Ctrl + I");
+        add_shortcut_row (group, "Preferences", "Ctrl + ,");
         add_shortcut_row (group, "Rotate Clockwise", "R");
         add_shortcut_row (group, "Rotate Counter-Clockwise", "L");
         add_shortcut_row (group, "Move to Trash", "Delete");

@@ -62,6 +62,13 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
 * ℹ️ **Image Properties & Metadata Panel (`Alt + Enter` / `Ctrl + I`):**
   * Displays native resolution, megapixels, file size, MIME type, dates, and camera EXIF information.
   * Quick-action buttons to open containing folder in file manager or copy path to clipboard.
+* 🎞️ **Slideshow Mode (`F5`):**
+  * Automatic continuous looping through folder images starting from the current slide.
+  * Preserved across fullscreen toggles and metadata panel toggles.
+  * Pause/play at any time via HeaderBar button or `F5`.
+* ⚙️ **Preferences Dialog (`Ctrl + ,`):**
+  * Configurable image fit mode (always stretch to fit window or show small images at 100% native size).
+  * Configurable slideshow delay (default: 3 seconds, range: 1–60 seconds).
 * 🖱️ **Mouse Scroll Navigation:** Instantly switch to the next/previous image by scrolling the mouse wheel.
 * ⌨️ **Ergonomic Shortcuts & Wide Info Dialog:** Intuitive keyboard navigation and a wide, readable shortcuts overlay (`F1` or `[i]`).
 * 🏷️ **Clear Window Title:** Displays the full path of the current image: `vView - /path/to/image.jpg`.
@@ -76,6 +83,7 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
 | :--- | :--- |
 | `F` | Toggle fullscreen mode |
 | `Escape` | Exit fullscreen mode or hide editing toolbar |
+| `F5` | Toggle slideshow playback |
 | `E` | Toggle editing & annotation toolbar |
 | `Ctrl + Z` | Undo last edit or rotation |
 | `Ctrl + Y` / `Ctrl + Shift + Z` | Redo last undone action |
@@ -83,6 +91,7 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
 | `L` | Rotate image counter-clockwise (90°) |
 | `Ctrl + 0` | Toggle 100% actual resolution / Fit to window |
 | `Alt + Enter` / `Ctrl + I` | Toggle image properties & metadata panel |
+| `Ctrl + ,` | Open preferences dialog |
 | `Ctrl + S` | Save image (prompt: Overwrite or Save As…) |
 | `Ctrl + Shift + S` | Direct "Save As…" (file chooser dialog) |
 | `Delete` | Move image to trash (confirmation dialog) |

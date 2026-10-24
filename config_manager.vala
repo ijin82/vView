@@ -9,6 +9,8 @@ public class ConfigManager : GLib.Object {
     public double line_width { get; set; default = 4.0; }
     public string font_desc { get; set; default = "Sans Bold 20"; }
     public bool edit_mode { get; set; default = false; }
+    public bool always_fit_to_window { get; set; default = false; }
+    public int slideshow_interval { get; set; default = 3; }
     public bool is_ready_to_save { get; set; default = false; }
 
     public static string get_config_file_path () {
@@ -83,6 +85,17 @@ public class ConfigManager : GLib.Object {
         try {
             edit_mode = kf.get_boolean ("Editor", "edit_mode");
         } catch (Error e) {}
+
+        try {
+            always_fit_to_window = kf.get_boolean ("Viewer", "always_fit_to_window");
+        } catch (Error e) {}
+
+        try {
+            int interval = kf.get_integer ("Viewer", "slideshow_interval");
+            if (interval >= 1 && interval <= 60) {
+                slideshow_interval = interval;
+            }
+        } catch (Error e) {}
     }
 
     public void save () {
@@ -105,6 +118,9 @@ public class ConfigManager : GLib.Object {
         kf.set_double ("Editor", "line_width", line_width);
         kf.set_string ("Editor", "font_desc", font_desc);
         kf.set_boolean ("Editor", "edit_mode", edit_mode);
+
+        kf.set_boolean ("Viewer", "always_fit_to_window", always_fit_to_window);
+        kf.set_integer ("Viewer", "slideshow_interval", slideshow_interval);
 
         try {
             string dir = GLib.Path.get_dirname (path);

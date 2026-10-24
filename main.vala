@@ -88,7 +88,7 @@ public class VViewApp : Adw.Application {
         edit_toggle_button.tooltip_text = "Toggle Annotation & Drawing Tools (E)";
         edit_toggle_button.toggled.connect (toggle_edit_mode);
 
-        viewer = new ViewerController (win, canvas, editor, save_button, edit_toggle_button);
+        viewer = new ViewerController (win, canvas, editor, save_button, edit_toggle_button, config_manager);
         save_button.clicked.connect (viewer.prompt_save_image);
 
         // Previous / Next buttons in HeaderBar
@@ -96,6 +96,7 @@ public class VViewApp : Adw.Application {
         prev_button.tooltip_text = "Previous image (Left arrow / Scroll up)";
         prev_button.clicked.connect (() => {
             viewer.show_image (viewer.current_index - 1);
+            if (viewer.is_slideshow_running) viewer.reset_slideshow_timer ();
         });
         header.pack_start (prev_button);
 
@@ -103,6 +104,7 @@ public class VViewApp : Adw.Application {
         next_button.tooltip_text = "Next image (Right arrow / Scroll down)";
         next_button.clicked.connect (() => {
             viewer.show_image (viewer.current_index + 1);
+            if (viewer.is_slideshow_running) viewer.reset_slideshow_timer ();
         });
         header.pack_start (next_button);
 
@@ -148,6 +150,12 @@ public class VViewApp : Adw.Application {
         fs_button.clicked.connect (viewer.toggle_fullscreen);
         header.pack_end (fs_button);
 
+        // Preferences button
+        var preferences_button = new Gtk.Button.from_icon_name ("emblem-system-symbolic");
+        preferences_button.tooltip_text = "Preferences (Ctrl+,)";
+        preferences_button.clicked.connect (viewer.prompt_preferences_dialog);
+        header.pack_end (preferences_button);
+
         // Info / Shortcuts button
         var info_button = new Gtk.Button.from_icon_name ("help-browser-symbolic");
         info_button.tooltip_text = "Keyboard Shortcuts & Info (F1)";
@@ -177,6 +185,22 @@ public class VViewApp : Adw.Application {
         });
 
         header.pack_end (properties_button);
+
+        // Slideshow toggle button
+        var slideshow_button = new Gtk.ToggleButton ();
+        slideshow_button.icon_name = "media-playback-start-symbolic";
+        slideshow_button.tooltip_text = "Slideshow (F5)";
+        slideshow_button.toggled.connect (() => {
+            if (slideshow_button.active != viewer.is_slideshow_running) {
+                viewer.toggle_slideshow ();
+            }
+        });
+        viewer.slideshow_toggled.connect ((running) => {
+            slideshow_button.active = running;
+            slideshow_button.icon_name = running ? "media-playback-pause-symbolic" : "media-playback-start-symbolic";
+            slideshow_button.tooltip_text = running ? "Pause Slideshow (F5)" : "Slideshow (F5)";
+        });
+        header.pack_end (slideshow_button);
 
         // Rotate clockwise button
         var rotate_cw_button = new Gtk.Button.from_icon_name ("object-rotate-right-symbolic");
@@ -281,9 +305,11 @@ public class VViewApp : Adw.Application {
             if (!edit_toggle_button.active && viewer.image_files.length > 1) {
                 if (dy > 0) {
                     viewer.show_image (viewer.current_index + 1);
+                    if (viewer.is_slideshow_running) viewer.reset_slideshow_timer ();
                     return true;
                 } else if (dy < 0) {
                     viewer.show_image (viewer.current_index - 1);
+                    if (viewer.is_slideshow_running) viewer.reset_slideshow_timer ();
                     return true;
                 }
             }
@@ -347,6 +373,13 @@ public class VViewApp : Adw.Application {
                 }
             }
 
+            // Preferences on Ctrl+,
+            if ((state & Gdk.ModifierType.CONTROL_MASK) != 0 &&
+                (keyval == Gdk.Key.comma || latin_lower == Gdk.Key.comma || key_lower == Gdk.Key.Cyrillic_be)) {
+                viewer.prompt_preferences_dialog ();
+                return true;
+            }
+
             // Zoom toggle 100% / Fit on Ctrl+0
             if ((state & Gdk.ModifierType.CONTROL_MASK) != 0 &&
                 (keyval == Gdk.Key.@0 || keyval == Gdk.Key.KP_0)) {
@@ -384,6 +417,12 @@ public class VViewApp : Adw.Application {
                     edit_toggle_button.active = true;
                 }
                 editor.move_btn.active = true;
+                return true;
+            }
+
+            // Toggle Slideshow on F5
+            if (latin_lower == Gdk.Key.F5 || keyval == Gdk.Key.F5) {
+                viewer.toggle_slideshow ();
                 return true;
             }
 
@@ -449,6 +488,7 @@ public class VViewApp : Adw.Application {
                 case Gdk.Key.Page_Up:
                     if (!edit_toggle_button.active) {
                         viewer.show_image (viewer.current_index - 1);
+                        if (viewer.is_slideshow_running) viewer.reset_slideshow_timer ();
                         return true;
                     }
                     break;
@@ -458,6 +498,7 @@ public class VViewApp : Adw.Application {
                 case Gdk.Key.space:
                     if (!edit_toggle_button.active) {
                         viewer.show_image (viewer.current_index + 1);
+                        if (viewer.is_slideshow_running) viewer.reset_slideshow_timer ();
                         return true;
                     }
                     break;
@@ -465,6 +506,7 @@ public class VViewApp : Adw.Application {
                 case Gdk.Key.Home:
                     if (!edit_toggle_button.active) {
                         viewer.show_image (0);
+                        if (viewer.is_slideshow_running) viewer.reset_slideshow_timer ();
                         return true;
                     }
                     break;
@@ -472,6 +514,7 @@ public class VViewApp : Adw.Application {
                 case Gdk.Key.End:
                     if (!edit_toggle_button.active) {
                         viewer.show_image (viewer.image_files.length - 1);
+                        if (viewer.is_slideshow_running) viewer.reset_slideshow_timer ();
                         return true;
                     }
                     break;

@@ -451,6 +451,18 @@ public class ImageCanvas : Gtk.DrawingArea {
         zoom_changed ();
     }
 
+    private bool _always_fit_to_window = false;
+    public bool always_fit_to_window {
+        get { return _always_fit_to_window; }
+        set {
+            if (_always_fit_to_window != value) {
+                _always_fit_to_window = value;
+                queue_draw ();
+                zoom_changed ();
+            }
+        }
+    }
+
     public double get_base_scale (int widget_w, int widget_h) {
         if (base_pixbuf == null) return 1.0;
         int pw = base_pixbuf.width;
@@ -460,6 +472,9 @@ public class ImageCanvas : Gtk.DrawingArea {
         if (ww <= 0 || wh <= 0 || pw <= 0 || ph <= 0) return 1.0;
 
         double fit_scale = double.min ((double) ww / pw, (double) wh / ph);
+        if (_always_fit_to_window) {
+            return fit_scale;
+        }
         // If image fits completely within the current area at 100%, do not upscale
         return double.min (1.0, fit_scale);
     }
