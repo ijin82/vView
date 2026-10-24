@@ -5,6 +5,7 @@ APP_NAME="vView"
 BIN_DIR="${HOME}/.local/bin"
 DESKTOP_DIR="${HOME}/.local/share/applications"
 DESKTOP_FILE="${DESKTOP_DIR}/${APP_NAME}.desktop"
+ICON_DIR="${HOME}/.local/share/icons/hicolor/scalable/apps"
 
 install_app() {
     echo "==> Building ${APP_NAME}..."
@@ -14,6 +15,17 @@ install_app() {
     mkdir -p "${BIN_DIR}"
     cp -f "${APP_NAME}" "${BIN_DIR}/${APP_NAME}"
     chmod 755 "${BIN_DIR}/${APP_NAME}"
+
+    ICON_NAME="image-viewer"
+    if [ -f "${APP_NAME}.svg" ]; then
+        echo "==> Installing application icon to ${ICON_DIR}..."
+        mkdir -p "${ICON_DIR}"
+        cp -f "${APP_NAME}.svg" "${ICON_DIR}/${APP_NAME}.svg"
+        ICON_NAME="${APP_NAME}"
+        if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+            gtk-update-icon-cache "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
+        fi
+    fi
 
     echo "==> Registering desktop application in ${DESKTOP_DIR}..."
     mkdir -p "${DESKTOP_DIR}"
@@ -25,7 +37,7 @@ Comment=Fast and lightweight image viewer
 Exec=${BIN_DIR}/${APP_NAME} %F
 Terminal=false
 Type=Application
-Icon=image-viewer
+Icon=${ICON_NAME}
 Categories=Graphics;Viewer;GTK;
 MimeType=image/jpeg;image/png;image/gif;image/webp;
 StartupNotify=true
@@ -54,6 +66,14 @@ uninstall_app() {
     if [ -f "${DESKTOP_FILE}" ]; then
         rm -f "${DESKTOP_FILE}"
         echo "  Removed ${DESKTOP_FILE}"
+    fi
+
+    if [ -f "${ICON_DIR}/${APP_NAME}.svg" ]; then
+        rm -f "${ICON_DIR}/${APP_NAME}.svg"
+        echo "  Removed ${ICON_DIR}/${APP_NAME}.svg"
+        if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+            gtk-update-icon-cache "${HOME}/.local/share/icons/hicolor" 2>/dev/null || true
+        fi
     fi
 
     if command -v update-desktop-database >/dev/null 2>&1; then

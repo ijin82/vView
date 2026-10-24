@@ -3,7 +3,7 @@ APP_NAME = vView
 all: build
 
 build:
-	valac --pkg libadwaita-1 main.vala -o $(APP_NAME)
+	valac --pkg libadwaita-1 -X -Wno-deprecated-declarations main.vala -o $(APP_NAME)
 
 run: build
 	./$(APP_NAME)

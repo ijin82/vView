@@ -19,6 +19,11 @@ The compiled binary is only **~45 KB**, and compile times are under **1 second**
   * Opens the requested image and gathers all supported images in the same directory.
   * Infinite looping (navigating past the last image loops back to the first).
   * Supported formats: **JPEG** (`.jpg`, `.jpeg`), **PNG** (`.png`), **GIF** (`.gif`), **WebP** (`.webp`).
+* 🔄 **In-Memory Rotation & Flexible Saving:**
+  * Rotate images clockwise (`R`) or counter-clockwise (`L`) in-memory without altering the original file immediately.
+  * A prominent **Save** button appears in the header bar as soon as changes are made.
+  * Choice between **Overwrite** (save directly into the current file) and **Save As…** (choose directory and filename via native `Gtk.FileDialog`).
+  * Preserves original file format and high visual fidelity (JPEG/WebP quality 95, lossless PNG/GIF).
 * 🖱️ **Mouse Scroll Navigation:** Instantly switch to the next/previous image by scrolling the mouse wheel.
 * ⌨️ **Ergonomic Shortcuts:** Intuitive keyboard navigation.
 * 🏷️ **Clear Window Title:** Displays the full path of the current image: `vView - /path/to/image.jpg`.
@@ -33,10 +38,15 @@ The compiled binary is only **~45 KB**, and compile times are under **1 second**
 | :--- | :--- |
 | `F` | Toggle fullscreen mode |
 | `Escape` | Exit fullscreen mode |
+| `R` | Rotate image clockwise (90°) |
+| `L` | Rotate image counter-clockwise (90°) |
+| `Ctrl + S` | Save image (prompt: Overwrite or Save As…) |
+| `Ctrl + Shift + S` | Direct "Save As…" (file chooser dialog) |
 | `→` / `Space` / `Page Down` | Next image |
 | `←` / `Page Up` | Previous image |
 | `Home` | Jump to first image in directory |
 | `End` | Jump to last image in directory |
+| `F1` | Show keyboard shortcuts & info dialog |
 | `Ctrl + Q` | Quit application |
 
 ### Mouse
