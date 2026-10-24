@@ -291,7 +291,7 @@ public class ViewerController : GLib.Object {
         add_shortcut_row (group, "Next Image", "→ / Space / Scroll Down");
         add_shortcut_row (group, "Previous Image", "← / Scroll Up");
         add_shortcut_row (group, "Zoom In / Out", "Ctrl + Wheel / Ctrl + [+/-]");
-        add_shortcut_row (group, "Reset Zoom", "Ctrl + 0");
+        add_shortcut_row (group, "Zoom 100% / Fit", "Ctrl + 0");
         add_shortcut_row (group, "Rotate Clockwise", "R");
         add_shortcut_row (group, "Rotate Counter-Clockwise", "L");
         add_shortcut_row (group, "Toggle Editing Toolbar", "E");

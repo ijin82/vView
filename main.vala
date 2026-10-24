@@ -120,9 +120,9 @@ public class VViewApp : Adw.Application {
         zoom_box.append (zoom_out_btn);
 
         zoom_label_btn = new Gtk.Button.with_label ("100%");
-        zoom_label_btn.tooltip_text = "Reset zoom to 100% (Ctrl + 0)";
+        zoom_label_btn.tooltip_text = "View at 100% actual size (Ctrl + 0)";
         zoom_label_btn.clicked.connect (() => {
-            canvas.reset_zoom ();
+            canvas.toggle_zoom_100_or_fit ();
         });
         zoom_box.append (zoom_label_btn);
 
@@ -137,7 +137,7 @@ public class VViewApp : Adw.Application {
 
         header.pack_start (zoom_box);
 
-        canvas.notify["zoom-factor"].connect (update_zoom_label);
+        canvas.zoom_changed.connect (update_zoom_label);
 
         // Fullscreen toggle button in HeaderBar
         var fs_button = new Gtk.Button.from_icon_name ("view-fullscreen-symbolic");
@@ -310,10 +310,10 @@ public class VViewApp : Adw.Application {
                 }
             }
 
-            // Zoom reset on Ctrl+0
+            // Zoom toggle 100% / Fit on Ctrl+0
             if ((state & Gdk.ModifierType.CONTROL_MASK) != 0 &&
                 (keyval == Gdk.Key.@0 || keyval == Gdk.Key.KP_0)) {
-                canvas.reset_zoom ();
+                canvas.toggle_zoom_100_or_fit ();
                 return true;
             }
 
@@ -495,8 +495,16 @@ public class VViewApp : Adw.Application {
 
     private void update_zoom_label () {
         if (zoom_label_btn != null && canvas != null) {
-            int pct = (int) Math.round (canvas.zoom_factor * 100.0);
+            double effective_scale = canvas.get_current_scale ();
+            int pct = (int) Math.round (effective_scale * 100.0);
+            if (pct < 1) pct = 1;
             zoom_label_btn.label = "%d%%".printf (pct);
+
+            if (Math.fabs (effective_scale - 1.0) < 0.01 && Math.fabs (canvas.zoom_factor - 1.0) > 0.01) {
+                zoom_label_btn.tooltip_text = "Fit image to window (Ctrl + 0)";
+            } else {
+                zoom_label_btn.tooltip_text = "View at 100% actual size (Ctrl + 0)";
+            }
         }
     }
 

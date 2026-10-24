@@ -295,11 +295,17 @@ public class ImageCanvas : Gtk.DrawingArea {
     private Cairo.ImageSurface? cached_surface = null;
     private Cairo.Pattern? cached_pattern = null;
 
+    private int last_draw_width = 0;
+    private int last_draw_height = 0;
+
+    public signal void zoom_changed ();
+
     public Gdk.Pixbuf? base_pixbuf {
         get { return _base_pixbuf; }
         set {
             _base_pixbuf = value;
             update_cached_surface ();
+            zoom_changed ();
             queue_draw ();
         }
     }
@@ -370,6 +376,11 @@ public class ImageCanvas : Gtk.DrawingArea {
     public ImageCanvas () {
         shapes = new GLib.List<AnnotationItem> ();
         set_draw_func (on_draw);
+        this.resize.connect ((w, h) => {
+            last_draw_width = w;
+            last_draw_height = h;
+            zoom_changed ();
+        });
 
         var drag = new Gtk.GestureDrag ();
         drag.drag_begin.connect (on_drag_begin);
@@ -413,7 +424,17 @@ public class ImageCanvas : Gtk.DrawingArea {
     }
 
     // Zoom & Pan support
-    public double zoom_factor { get; set; default = 1.0; }
+    private double _zoom_factor = 1.0;
+    public double zoom_factor {
+        get { return _zoom_factor; }
+        set {
+            if (_zoom_factor != value) {
+                _zoom_factor = value;
+                notify_property ("zoom-factor");
+                zoom_changed ();
+            }
+        }
+    }
     public double pan_x { get; set; default = 0.0; }
     public double pan_y { get; set; default = 0.0; }
     private bool is_panning = false;
@@ -427,22 +448,66 @@ public class ImageCanvas : Gtk.DrawingArea {
         pan_x = 0.0;
         pan_y = 0.0;
         queue_draw ();
+        zoom_changed ();
+    }
+
+    public void zoom_to_100 () {
+        if (base_pixbuf == null) return;
+        int ww = get_width ();
+        int wh = get_height ();
+        if (ww <= 0) ww = last_draw_width;
+        if (wh <= 0) wh = last_draw_height;
+        if (ww <= 0 || wh <= 0) return;
+
+        double base_scale = double.min ((double) ww / base_pixbuf.width, (double) wh / base_pixbuf.height);
+        if (base_scale <= 0.0) return;
+
+        zoom_factor = 1.0 / base_scale;
+        pan_x = 0.0;
+        pan_y = 0.0;
+        queue_draw ();
+        zoom_changed ();
+    }
+
+    public void toggle_zoom_100_or_fit () {
+        if (base_pixbuf == null) return;
+        int ww = get_width ();
+        int wh = get_height ();
+        if (ww <= 0) ww = last_draw_width;
+        if (wh <= 0) wh = last_draw_height;
+        if (ww <= 0 || wh <= 0) return;
+
+        double base_scale = double.min ((double) ww / base_pixbuf.width, (double) wh / base_pixbuf.height);
+        if (base_scale <= 0.0) return;
+
+        double current_scale = base_scale * zoom_factor;
+        if (Math.fabs (current_scale - 1.0) < 0.01 && Math.fabs (zoom_factor - 1.0) > 0.01) {
+            reset_zoom ();
+        } else {
+            zoom_to_100 ();
+        }
     }
 
     public void zoom_at (double cursor_x, double cursor_y, double factor_multiplier) {
         if (base_pixbuf == null) return;
-        double old_zf = zoom_factor;
-        // Limit zoom between 0.05 (5%) and 2.50 (250%)
-        double new_zf = (old_zf * factor_multiplier).clamp (0.05, 2.50);
-        if (new_zf == old_zf) return;
 
         int ww = get_width ();
         int wh = get_height ();
+        if (ww <= 0) ww = last_draw_width;
+        if (wh <= 0) wh = last_draw_height;
         if (ww <= 0 || wh <= 0) return;
 
         double base_scale = double.min ((double) ww / base_pixbuf.width, (double) wh / base_pixbuf.height);
+        if (base_scale <= 0.0) return;
+
+        double old_zf = zoom_factor;
         double old_scale = base_scale * old_zf;
-        double new_scale = base_scale * new_zf;
+        double min_scale = double.min (0.01, base_scale * 0.05);
+        double max_scale = double.max (50.0, base_scale * 10.0);
+        double new_scale = (old_scale * factor_multiplier).clamp (min_scale, max_scale);
+        if (new_scale == old_scale) return;
+
+        double new_zf = new_scale / base_scale;
 
         double base_ox = (ww - base_pixbuf.width * old_scale) / 2.0 + pan_x;
         double base_oy = (wh - base_pixbuf.height * old_scale) / 2.0 + pan_y;
@@ -473,6 +538,12 @@ public class ImageCanvas : Gtk.DrawingArea {
         }
         int pw = base_pixbuf.width;
         int ph = base_pixbuf.height;
+        if (widget_w <= 0) widget_w = last_draw_width;
+        if (widget_h <= 0) widget_h = last_draw_height;
+        if (widget_w <= 0 || widget_h <= 0 || pw <= 0 || ph <= 0) {
+            offset_x = 0; offset_y = 0; drawn_w = (double) pw; drawn_h = (double) ph; scale = 1.0;
+            return;
+        }
         double base_scale = double.min ((double) widget_w / pw, (double) widget_h / ph);
         scale = base_scale * zoom_factor;
         drawn_w = pw * scale;
@@ -540,7 +611,16 @@ public class ImageCanvas : Gtk.DrawingArea {
             root.set_focus (null);
         }
 
-        if (base_pixbuf == null || current_tool == ToolType.NONE) return;
+        if (base_pixbuf == null) return;
+
+        if (current_tool == ToolType.NONE) {
+            is_panning = true;
+            pan_start_x = x;
+            pan_start_y = y;
+            pan_orig_x = pan_x;
+            pan_orig_y = pan_y;
+            return;
+        }
 
         double ix, iy;
         widget_to_image (x, y, out ix, out iy);
@@ -842,6 +922,8 @@ public class ImageCanvas : Gtk.DrawingArea {
     }
 
     private void on_draw (Gtk.DrawingArea area, Cairo.Context cr, int width, int height) {
+        last_draw_width = width;
+        last_draw_height = height;
         if (base_pixbuf == null) return;
 
         double ox, oy, dw, dh, scale;

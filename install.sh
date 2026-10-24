@@ -71,7 +71,7 @@ StartupNotify=true
 StartupWMClass=com.example.vView
 EOF
     chmod 644 "${DESKTOP_FILE}"
-    ln -sf "${APP_NAME}.desktop" "${DESKTOP_DIR}/com.example.${APP_NAME}.desktop"
+    rm -f "${DESKTOP_DIR}/com.example.${APP_NAME}.desktop"
 
     if command -v update-desktop-database >/dev/null 2>&1; then
         echo "==> Updating desktop database..."
