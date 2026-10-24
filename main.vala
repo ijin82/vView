@@ -433,6 +433,18 @@ public class VViewApp : Adw.Application {
                     }
                     break;
 
+                case Gdk.Key.Delete:
+                case Gdk.Key.KP_Delete:
+                    if ((state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK)) == 0) {
+                        if (edit_toggle_button.active && canvas.selected_shape != null) {
+                            canvas.remove_shape (canvas.selected_shape);
+                        } else {
+                            viewer.prompt_trash_image ();
+                        }
+                        return true;
+                    }
+                    break;
+
                 case Gdk.Key.Left:
                 case Gdk.Key.Page_Up:
                     if (!edit_toggle_button.active) {
@@ -550,7 +562,7 @@ public class VViewApp : Adw.Application {
             if (pct < 1) pct = 1;
             zoom_label_btn.label = "%d%%".printf (pct);
 
-            if (Math.fabs (effective_scale - 1.0) < 0.01 && Math.fabs (canvas.zoom_factor - 1.0) > 0.01) {
+            if (Math.fabs (effective_scale - 1.0) < 0.01) {
                 zoom_label_btn.tooltip_text = "Fit image to window (Ctrl + 0)";
             } else {
                 zoom_label_btn.tooltip_text = "View at 100% actual size (Ctrl + 0)";

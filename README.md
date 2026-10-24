@@ -85,6 +85,7 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
 | `Alt + Enter` / `Ctrl + I` | Toggle image properties & metadata panel |
 | `Ctrl + S` | Save image (prompt: Overwrite or Save As…) |
 | `Ctrl + Shift + S` | Direct "Save As…" (file chooser dialog) |
+| `Delete` | Move image to trash (confirmation dialog) |
 | `→` / `Space` / `Page Down` | Next image (when not actively drawing) |
 | `←` / `Page Up` | Previous image (when not actively drawing) |
 | `Home` | Jump to first image in directory |

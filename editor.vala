@@ -451,6 +451,19 @@ public class ImageCanvas : Gtk.DrawingArea {
         zoom_changed ();
     }
 
+    public double get_base_scale (int widget_w, int widget_h) {
+        if (base_pixbuf == null) return 1.0;
+        int pw = base_pixbuf.width;
+        int ph = base_pixbuf.height;
+        int ww = widget_w > 0 ? widget_w : last_draw_width;
+        int wh = widget_h > 0 ? widget_h : last_draw_height;
+        if (ww <= 0 || wh <= 0 || pw <= 0 || ph <= 0) return 1.0;
+
+        double fit_scale = double.min ((double) ww / pw, (double) wh / ph);
+        // If image fits completely within the current area at 100%, do not upscale
+        return double.min (1.0, fit_scale);
+    }
+
     public void zoom_to_100 () {
         if (base_pixbuf == null) return;
         int ww = get_width ();
@@ -459,7 +472,7 @@ public class ImageCanvas : Gtk.DrawingArea {
         if (wh <= 0) wh = last_draw_height;
         if (ww <= 0 || wh <= 0) return;
 
-        double base_scale = double.min ((double) ww / base_pixbuf.width, (double) wh / base_pixbuf.height);
+        double base_scale = get_base_scale (ww, wh);
         if (base_scale <= 0.0) return;
 
         zoom_factor = 1.0 / base_scale;
@@ -477,13 +490,20 @@ public class ImageCanvas : Gtk.DrawingArea {
         if (wh <= 0) wh = last_draw_height;
         if (ww <= 0 || wh <= 0) return;
 
-        double base_scale = double.min ((double) ww / base_pixbuf.width, (double) wh / base_pixbuf.height);
-        if (base_scale <= 0.0) return;
+        double base_scale = get_base_scale (ww, wh);
+        double fit_scale = double.min ((double) ww / base_pixbuf.width, (double) wh / base_pixbuf.height);
+        if (base_scale <= 0.0 || fit_scale <= 0.0) return;
 
         double current_scale = base_scale * zoom_factor;
-        if (Math.fabs (current_scale - 1.0) < 0.01 && Math.fabs (zoom_factor - 1.0) > 0.01) {
-            reset_zoom ();
+        if (Math.fabs (current_scale - 1.0) < 0.01) {
+            // Already at 100%: toggle to fit
+            zoom_factor = fit_scale / base_scale;
+            pan_x = 0.0;
+            pan_y = 0.0;
+            queue_draw ();
+            zoom_changed ();
         } else {
+            // Not at 100%: toggle to 100% actual size
             zoom_to_100 ();
         }
     }
@@ -497,7 +517,7 @@ public class ImageCanvas : Gtk.DrawingArea {
         if (wh <= 0) wh = last_draw_height;
         if (ww <= 0 || wh <= 0) return;
 
-        double base_scale = double.min ((double) ww / base_pixbuf.width, (double) wh / base_pixbuf.height);
+        double base_scale = get_base_scale (ww, wh);
         if (base_scale <= 0.0) return;
 
         double old_zf = zoom_factor;
@@ -544,7 +564,7 @@ public class ImageCanvas : Gtk.DrawingArea {
             offset_x = 0; offset_y = 0; drawn_w = (double) pw; drawn_h = (double) ph; scale = 1.0;
             return;
         }
-        double base_scale = double.min ((double) widget_w / pw, (double) widget_h / ph);
+        double base_scale = get_base_scale (widget_w, widget_h);
         scale = base_scale * zoom_factor;
         drawn_w = pw * scale;
         drawn_h = ph * scale;
@@ -872,12 +892,55 @@ public class ImageCanvas : Gtk.DrawingArea {
         return Gdk.pixbuf_get_from_surface (surface, 0, 0, pw, ph);
     }
 
+    private void bake_intersecting_shapes (double rx, double ry, double rw, double rh) {
+        if (_base_pixbuf == null || shapes.length () == 0) return;
+
+        var pctx = get_pango_context ();
+        var intersecting = new GLib.List<AnnotationItem> ();
+        foreach (unowned AnnotationItem item in shapes) {
+            double bx, by, bw, bh;
+            item.get_bounds (pctx, out bx, out by, out bw, out bh);
+            if (!(bx + bw < rx || bx > rx + rw || by + bh < ry || by > ry + rh)) {
+                intersecting.append (item);
+            }
+        }
+
+        if (intersecting.length () == 0) return;
+
+        int pw = _base_pixbuf.width;
+        int ph = _base_pixbuf.height;
+        var surface = new Cairo.ImageSurface (Cairo.Format.ARGB32, pw, ph);
+        var cr = new Cairo.Context (surface);
+        Gdk.cairo_set_source_pixbuf (cr, _base_pixbuf, 0, 0);
+        cr.paint ();
+
+        foreach (unowned AnnotationItem item in intersecting) {
+            item.draw (cr, 1.0, 0.0, 0.0, pctx);
+            unowned GLib.List<AnnotationItem>? link = shapes.find (item);
+            if (link != null) {
+                shapes.delete_link (link);
+            }
+            if (selected_shape == item) {
+                selected_shape = null;
+            }
+        }
+
+        var new_base = Gdk.pixbuf_get_from_surface (surface, 0, 0, pw, ph);
+        if (new_base != null) {
+            _base_pixbuf = new_base;
+        }
+    }
+
     private void apply_redact (int rx, int ry, int rw, int rh) {
-        int w = base_pixbuf.get_width ();
-        int h = base_pixbuf.get_height ();
-        int n_channels = base_pixbuf.get_n_channels ();
-        int rowstride = base_pixbuf.get_rowstride ();
-        unowned uint8[] pixels = base_pixbuf.get_pixels_with_length ();
+        if (_base_pixbuf == null) return;
+
+        bake_intersecting_shapes ((double) rx, (double) ry, (double) rw, (double) rh);
+
+        int w = _base_pixbuf.get_width ();
+        int h = _base_pixbuf.get_height ();
+        int n_channels = _base_pixbuf.get_n_channels ();
+        int rowstride = _base_pixbuf.get_rowstride ();
+        unowned uint8[] pixels = _base_pixbuf.get_pixels_with_length ();
 
         int x1 = int.max (0, rx);
         int y1 = int.max (0, ry);
@@ -892,7 +955,7 @@ public class ImageCanvas : Gtk.DrawingArea {
                 int count = bw * bh;
                 if (count == 0) continue;
 
-                long sum_r = 0, sum_g = 0, sum_b = 0;
+                long sum_r = 0, sum_g = 0, sum_b = 0, sum_a = 0;
                 for (int cy = 0; cy < bh; cy++) {
                     int row = (by + cy) * rowstride;
                     for (int cx = 0; cx < bw; cx++) {
@@ -900,12 +963,19 @@ public class ImageCanvas : Gtk.DrawingArea {
                         sum_r += pixels[idx];
                         sum_g += pixels[idx + 1];
                         sum_b += pixels[idx + 2];
+                        if (n_channels >= 4) {
+                            sum_a += pixels[idx + 3];
+                        }
                     }
                 }
 
                 uint8 avg_r = (uint8) (sum_r / count);
                 uint8 avg_g = (uint8) (sum_g / count);
                 uint8 avg_b = (uint8) (sum_b / count);
+                uint8 avg_a = (n_channels >= 4) ? (uint8) (sum_a / count) : (uint8) 255;
+                if (n_channels >= 4 && avg_a > 0) {
+                    avg_a = (uint8) int.max ((int) avg_a, 255);
+                }
 
                 for (int cy = 0; cy < bh; cy++) {
                     int row = (by + cy) * rowstride;
@@ -914,6 +984,9 @@ public class ImageCanvas : Gtk.DrawingArea {
                         pixels[idx] = avg_r;
                         pixels[idx + 1] = avg_g;
                         pixels[idx + 2] = avg_b;
+                        if (n_channels >= 4) {
+                            pixels[idx + 3] = avg_a;
+                        }
                     }
                 }
             }

@@ -79,6 +79,79 @@ public class ViewerController : GLib.Object {
         });
     }
 
+    public void prompt_trash_image () {
+        if (image_files.length == 0 || current_index < 0 || current_index >= image_files.length) return;
+
+        var path = image_files[current_index];
+        var filename = Path.get_basename (path);
+
+        var dialog = new Adw.AlertDialog (
+            "Move to Trash?",
+            "Are you sure you want to move \"%s\" to the trash?".printf (filename)
+        );
+        dialog.add_response ("cancel", "Cancel");
+        dialog.add_response ("trash", "Move to Trash");
+        dialog.set_response_appearance ("trash", Adw.ResponseAppearance.DESTRUCTIVE);
+        dialog.set_default_response ("cancel");
+        dialog.set_close_response ("cancel");
+
+        dialog.choose.begin (win, null, (obj, res) => {
+            var response = dialog.choose.end (res);
+            if (response == "trash") {
+                trash_current_image ();
+            }
+        });
+    }
+
+    public void trash_current_image () {
+        if (image_files.length == 0 || current_index < 0 || current_index >= image_files.length) return;
+
+        var path = image_files[current_index];
+        var file = File.new_for_path (path);
+        try {
+            file.trash ();
+        } catch (Error e) {
+            warning ("Failed to move file to trash: %s", e.message);
+            var err_dialog = new Adw.AlertDialog (
+                "Could Not Move to Trash",
+                "Failed to move \"%s\" to trash:\n%s".printf (Path.get_basename (path), e.message)
+            );
+            err_dialog.add_response ("ok", "OK");
+            err_dialog.set_default_response ("ok");
+            err_dialog.set_close_response ("ok");
+            err_dialog.choose.begin (win, null, null);
+            return;
+        }
+
+        string[] new_files = {};
+        for (int i = 0; i < image_files.length; i++) {
+            if (i != current_index) {
+                new_files += image_files[i];
+            }
+        }
+        image_files = new_files;
+
+        if (image_files.length == 0) {
+            current_index = 0;
+            current_pixbuf = null;
+            canvas.base_pixbuf = null;
+            canvas.clear_shapes ();
+            canvas.reset_zoom ();
+            is_modified = false;
+            save_button.visible = false;
+            editor.reset_history ();
+            win.title = "vView - No images";
+            if (properties_view != null) {
+                properties_view.update_metadata (null, null);
+            }
+        } else {
+            if (current_index >= image_files.length) {
+                current_index = image_files.length - 1;
+            }
+            show_image (current_index);
+        }
+    }
+
     public void show_save_as_dialog () {
         if (current_pixbuf == null || image_files.length == 0) return;
 
@@ -313,6 +386,7 @@ public class ViewerController : GLib.Object {
         add_shortcut_row (group, "Image Properties", "Alt + Enter / Ctrl + I");
         add_shortcut_row (group, "Rotate Clockwise", "R");
         add_shortcut_row (group, "Rotate Counter-Clockwise", "L");
+        add_shortcut_row (group, "Move to Trash", "Delete");
         add_shortcut_row (group, "Toggle Editing Toolbar", "E");
         add_shortcut_row (group, "Select & Move Elements", "M");
         add_shortcut_row (group, "Undo Drawing", "Ctrl + Z");
