@@ -8,7 +8,7 @@
 
 It seamlessly integrates with GNOME desktop environments following the GNOME Human Interface Guidelines (HIG), while functioning smoothly across all other desktop environments (KDE Plasma, XFCE, etc.).
 
-The compiled binary is only **~45 KB**, and compile times are under **1 second**.
+The compiled binary is only **~300 KB** (stripped: **~280 KB**), and compile times are sub-second.
 
 ---
 
@@ -37,7 +37,7 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
 * 🔢 **Numbered Step Badges (1, 2, 3...):** Sequentially number steps and workflows on screenshots with auto-incrementing numbered circles. Badges automatically renumber if an intermediate badge is deleted, and can be moved or customized with custom fonts and colors.
 * 💬 **Quick Text Notes & Badges:** Click anywhere on the image to type notes and labels. Features background badges for readability against any background and full system font selection (`FontChooserDialog`).
 * ⬛ **Redaction & Privacy Masking (Mosaic Pixelation):** Drag a box over sensitive information (passwords, email addresses, personal data) to apply smooth mosaic pixelation.
-* 🖐️ **Select & Move:** Reposition any annotation item after drawing it.
+* 🖐️ **Select & Move (`M`):** Reposition any annotation item after drawing it. Dragging an empty area in move mode pans the image view.
 * 🎨 **Color & Stroke Customization:** Choose any stroke or text color with the color picker, and adjust line width from 1 px to 50 px with real-time preview.
 * ↩️ **Full Undo & Redo History:** Safely revert or re-apply any editing action using `Ctrl + Z` and `Ctrl + Y` (or `Ctrl + Shift + Z`).
 * 💾 **Lossless In-Memory Workflow:** Edits are kept in memory until you choose to **Save** (`Ctrl + S`) or **Save As…** (`Ctrl + Shift + S`).
@@ -47,6 +47,10 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
 ## Features
 
 * 🎨 **Native GNOME Experience:** Rounded window corners, adaptive `Adw.HeaderBar`, and automatic system dark/light style support.
+* 🔍 **Smooth Zoom & Pan:**
+  * Dedicated zoom buttons in the HeaderBar with live percentage readout (`100%`, `Fit`, etc.).
+  * Smooth zooming centered at the cursor via `Ctrl + Mouse Wheel` or `Ctrl + [+]` / `Ctrl + [-]`.
+  * Quick toggle between 100% native resolution and fit-to-window via `Ctrl + 0` or by clicking the zoom percentage badge.
 * 🖥️ **Fullscreen Mode:**
   * Toggle using the `F` key or double-clicking the mouse.
   * The header bar automatically hides in fullscreen.
@@ -60,6 +64,9 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
   * A prominent **Save** button appears in the header bar as soon as changes are made.
   * Choice between **Overwrite** (save directly into the current file) and **Save As…** (choose directory and filename via native `Gtk.FileDialog`).
   * Preserves original file format and high visual fidelity (JPEG/WebP quality 95, lossless PNG/GIF).
+* 🗑️ **Safe File Deletion (`Delete`):**
+  * Move the current file to system trash directly from the viewer with a confirmation dialog.
+  * When in annotation edit mode, `Delete` quickly removes the currently selected element without deleting the file.
 * ℹ️ **Image Properties & Metadata Panel (`Alt + Enter` / `Ctrl + I`):**
   * Displays native resolution, megapixels, file size, MIME type, dates, and camera EXIF information.
   * Quick-action buttons to open containing folder in file manager or copy path to clipboard.
@@ -70,8 +77,9 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
 * ⚙️ **Preferences Dialog (`Ctrl + ,`):**
   * Configurable image fit mode (always stretch to fit window or show small images at 100% native size).
   * Configurable slideshow delay (default: 3 seconds, range: 1–60 seconds).
+  * Persistent settings saved automatically across sessions (window size, position, active tools, colors, fonts).
 * 🖱️ **Mouse Scroll Navigation:** Instantly switch to the next/previous image by scrolling the mouse wheel.
-* ⌨️ **Ergonomic Shortcuts & Wide Info Dialog:** Intuitive keyboard navigation and a wide, readable shortcuts overlay (`F1` or `[i]`).
+* ⌨️ **Ergonomic Shortcuts & Bilingual Layout Support:** Full keyboard navigation that works transparently across both Latin and Cyrillic/Russian keyboard layouts without switching, plus an accessible shortcuts dialog (`F1`).
 * 🏷️ **Clear Window Title:** Displays the full path of the current image: `vView - /path/to/image.jpg`.
 
 ---
@@ -83,19 +91,22 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
 | Key | Action |
 | :--- | :--- |
 | `F` | Toggle fullscreen mode |
-| `Escape` | Exit fullscreen mode or hide editing toolbar |
+| `Escape` | Exit fullscreen mode, close properties panel, or hide editing toolbar |
 | `F5` | Toggle slideshow playback |
 | `E` | Toggle editing & annotation toolbar |
+| `M` | Switch to Select & Move element tool |
 | `Ctrl + Z` | Undo last edit or rotation |
 | `Ctrl + Y` / `Ctrl + Shift + Z` | Redo last undone action |
 | `R` | Rotate image clockwise (90°) |
 | `L` | Rotate image counter-clockwise (90°) |
+| `Ctrl + +` / `Ctrl + =` | Zoom in |
+| `Ctrl + -` | Zoom out |
 | `Ctrl + 0` | Toggle 100% actual resolution / Fit to window |
 | `Alt + Enter` / `Ctrl + I` | Toggle image properties & metadata panel |
 | `Ctrl + ,` | Open preferences dialog |
 | `Ctrl + S` | Save image (prompt: Overwrite or Save As…) |
 | `Ctrl + Shift + S` | Direct "Save As…" (file chooser dialog) |
-| `Delete` | Move image to trash (confirmation dialog) |
+| `Delete` | Delete selected annotation shape (or move image file to trash) |
 | `→` / `Space` / `Page Down` | Next image (when not actively drawing) |
 | `←` / `Page Up` | Previous image (when not actively drawing) |
 | `Home` | Jump to first image in directory |
@@ -103,13 +114,17 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
 | `F1` | Show keyboard shortcuts & info dialog |
 | `Ctrl + Q` | Quit application |
 
+*Note: All single-letter shortcuts (`E`, `M`, `R`, `L`, `F`, etc.) work identically on Russian keyboard layouts (`У`, `Ь`, `К`, `Д`, `А`, etc.).*
+
 ### Mouse
 
 | Action | Description |
 | :--- | :--- |
 | **Scroll Wheel Down** | Next image |
 | **Scroll Wheel Up** | Previous image |
+| **Ctrl + Scroll Wheel** | Zoom in / Zoom out smoothly at cursor position |
 | **Double Click (Left Button)** | Toggle fullscreen mode |
+| **Right Click (on shape)** | Open confirmation dialog to delete clicked annotation element |
 | **Idle for 2 seconds (Fullscreen)** | Automatically hide cursor |
 
 ---
