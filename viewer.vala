@@ -529,8 +529,8 @@ public class ViewerController : GLib.Object {
 
     private void add_shortcut_row (Adw.PreferencesGroup group, string title, string shortcut) {
         var row = new Adw.ActionRow ();
-        row.title = title;
-        var badge = new Gtk.Label ("<tt><b>%s</b></tt>".printf (shortcut));
+        row.title = GLib.Markup.escape_text (title);
+        var badge = new Gtk.Label ("<tt><b>%s</b></tt>".printf (GLib.Markup.escape_text (shortcut)));
         badge.use_markup = true;
         badge.add_css_class ("dim-label");
         row.add_suffix (badge);
