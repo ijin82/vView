@@ -420,8 +420,8 @@ public class VViewApp : Adw.Application {
                 return true;
             }
 
-            // Toggle Slideshow on F5
-            if (latin_lower == Gdk.Key.F5 || keyval == Gdk.Key.F5) {
+            // Toggle Slideshow on F5 / space
+            if (latin_lower == Gdk.Key.F5 || keyval == Gdk.Key.F5 || keyval == Gdk.Key.space) {
                 viewer.toggle_slideshow ();
                 return true;
             }
@@ -495,7 +495,6 @@ public class VViewApp : Adw.Application {
 
                 case Gdk.Key.Right:
                 case Gdk.Key.Page_Down:
-                case Gdk.Key.space:
                     if (!edit_toggle_button.active) {
                         viewer.show_image (viewer.current_index + 1);
                         if (viewer.is_slideshow_running) viewer.reset_slideshow_timer ();

@@ -496,7 +496,7 @@ public class ViewerController : GLib.Object {
 
         add_shortcut_row (group, "Toggle Fullscreen", "F / Double Click");
         add_shortcut_row (group, "Exit Fullscreen", "Escape");
-        add_shortcut_row (group, "Next Image", "→ / Space / Scroll Down");
+        add_shortcut_row (group, "Next Image", "→ / Scroll Down");
         add_shortcut_row (group, "Previous Image", "← / Scroll Up");
         add_shortcut_row (group, "Zoom In / Out", "Ctrl + Wheel / Ctrl + [+/-]");
         add_shortcut_row (group, "Zoom 100% / Fit", "Ctrl + 0");

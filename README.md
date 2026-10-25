@@ -92,7 +92,7 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
 | :--- | :--- |
 | `F` | Toggle fullscreen mode |
 | `Escape` | Exit fullscreen mode, close properties panel, or hide editing toolbar |
-| `F5` | Toggle slideshow playback |
+| `F5` / `Space` | Toggle slideshow playback |
 | `E` | Toggle editing & annotation toolbar |
 | `M` | Switch to Select & Move element tool |
 | `Ctrl + Z` | Undo last edit or rotation |
@@ -107,7 +107,7 @@ Press **`E`** (or click the edit button in the header bar) to reveal the toolbar
 | `Ctrl + S` | Save image (prompt: Overwrite or Save As…) |
 | `Ctrl + Shift + S` | Direct "Save As…" (file chooser dialog) |
 | `Delete` | Delete selected annotation shape (or move image file to trash) |
-| `→` / `Space` / `Page Down` | Next image (when not actively drawing) |
+| `→` / `Page Down` | Next image (when not actively drawing) |
 | `←` / `Page Up` | Previous image (when not actively drawing) |
 | `Home` | Jump to first image in directory |
 | `End` | Jump to last image in directory |
