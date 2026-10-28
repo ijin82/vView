@@ -19,6 +19,6 @@ uninstall:
 	./install.sh uninstall
 
 clean:
-	rm -f $(APP_NAME)
+	rm -f $(APP_NAME) *.vala.c *.o *.c
 
 .PHONY: all build run install install-lite uninstall clean

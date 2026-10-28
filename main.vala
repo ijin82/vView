@@ -420,8 +420,8 @@ public class VViewApp : Adw.Application {
                 return true;
             }
 
-            // Toggle Slideshow on F5 / space
-            if (latin_lower == Gdk.Key.F5 || keyval == Gdk.Key.F5 || keyval == Gdk.Key.space) {
+            // Toggle Slideshow on F5 / space (only when not in editing mode)
+            if (latin_lower == Gdk.Key.F5 || keyval == Gdk.Key.F5 || (!edit_toggle_button.active && keyval == Gdk.Key.space)) {
                 viewer.toggle_slideshow ();
                 return true;
             }
@@ -475,8 +475,10 @@ public class VViewApp : Adw.Application {
                 case Gdk.Key.Delete:
                 case Gdk.Key.KP_Delete:
                     if ((state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.ALT_MASK)) == 0) {
-                        if (edit_toggle_button.active && canvas.selected_shape != null) {
-                            canvas.remove_shape (canvas.selected_shape);
+                        if (edit_toggle_button.active) {
+                            if (canvas.selected_shape != null) {
+                                canvas.remove_shape (canvas.selected_shape);
+                            }
                         } else {
                             viewer.prompt_trash_image ();
                         }

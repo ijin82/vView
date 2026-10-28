@@ -69,7 +69,7 @@ public class ImageMetadata : GLib.Object {
 
             meta.file_size_bytes = info.get_size ();
             string formatted_size = GLib.format_size (meta.file_size_bytes);
-            meta.file_size_str = "%s (%'ld bytes)".printf (formatted_size, (long) meta.file_size_bytes);
+            meta.file_size_str = "%s (%s bytes)".printf (formatted_size, meta.file_size_bytes.to_string ());
 
             meta.mime_type = info.get_content_type ();
             if (meta.mime_type != null && meta.mime_type.length > 0) {
@@ -246,7 +246,10 @@ public class ImageMetadata : GLib.Object {
                         f_number = "f/%.1f".printf (f);
                     }
                 } else if (tag == 0x8827) { // ISO Speed
-                    iso_speed = "ISO %u".printf (val_inline);
+                    uint iso = (type_val == 3) ? (uint) read_u16 (data, val_off, le) : (uint) val_inline;
+                    if (iso > 0) {
+                        iso_speed = "ISO %u".printf (iso);
+                    }
                 } else if (tag == 0x9003) { // DateTimeOriginal
                     date_taken = read_ascii (data, val_off, count);
                 } else if (tag == 0x920A) { // FocalLength (rational)

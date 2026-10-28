@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="vView.svg" width="160" height="160" alt="Waller Logo" />
+  <img src="vView.svg" width="160" height="160" alt="vView Logo" />
 </p>
 
 # vView (Vala View)

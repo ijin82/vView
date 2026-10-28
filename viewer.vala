@@ -137,10 +137,11 @@ public class ViewerController : GLib.Object {
             return;
         }
 
-        string[] new_files = {};
+        string[] new_files = new string[image_files.length - 1];
+        int idx = 0;
         for (int i = 0; i < image_files.length; i++) {
             if (i != current_index) {
-                new_files += image_files[i];
+                new_files[idx++] = image_files[i];
             }
         }
         image_files = new_files;
@@ -339,7 +340,9 @@ public class ViewerController : GLib.Object {
         dialog.title = "Preferences";
         dialog.set_transient_for (win);
         dialog.set_modal (true);
-        dialog.set_default_size (550, 480);
+        dialog.set_default_size (620, 560);
+        dialog.set_resizable (true);
+        dialog.set_search_enabled (true);
 
         var page = new Adw.PreferencesPage ();
 
@@ -433,9 +436,11 @@ public class ViewerController : GLib.Object {
         }
 
         list.sort (strcmp);
-        string[] files = {};
+        uint n = list.length ();
+        string[] files = new string[n];
+        int idx = 0;
         foreach (var item in list) {
-            files += item;
+            files[idx++] = item;
         }
         image_files = files;
 
@@ -500,7 +505,7 @@ public class ViewerController : GLib.Object {
         add_shortcut_row (group, "Previous Image", "← / Scroll Up");
         add_shortcut_row (group, "Zoom In / Out", "Ctrl + Wheel / Ctrl + [+/-]");
         add_shortcut_row (group, "Zoom 100% / Fit", "Ctrl + 0");
-        add_shortcut_row (group, "Toggle Slideshow", "F5");
+        add_shortcut_row (group, "Toggle Slideshow", "F5 / Space");
         add_shortcut_row (group, "Image Properties", "Alt + Enter / Ctrl + I");
         add_shortcut_row (group, "Preferences", "Ctrl + ,");
         add_shortcut_row (group, "Rotate Clockwise", "R");
