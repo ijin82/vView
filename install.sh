@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}"
+
 APP_NAME="vView"
 BIN_DIR="${HOME}/.local/bin"
 DESKTOP_DIR="${HOME}/.local/share/applications"
@@ -86,8 +89,10 @@ EOF
 }
 
 install_app() {
-    echo "==> Building ${APP_NAME}..."
-    make build
+    if [ ! -f "${APP_NAME}" ]; then
+        echo "==> Building ${APP_NAME}..."
+        make build
+    fi
     copy_files
 }
 
@@ -133,14 +138,14 @@ case "$1" in
     uninstall)
         uninstall_app
         ;;
-    install-lite)
+    install-lite|lite)
         copy_files
         ;;
     install|"")
         install_app
         ;;
     *)
-        echo "Usage: $0 [install|install-lite|uninstall]"
+        echo "Usage: $0 [install|install-lite|lite|uninstall]"
         exit 1
         ;;
 esac

@@ -48,3 +48,8 @@ Thumbs.db
 .vscode/
 .idea/
 *.kate-swp
+
+# --- Release Packaging ---
+dist/
+*.tar.gz
+*.sha256
